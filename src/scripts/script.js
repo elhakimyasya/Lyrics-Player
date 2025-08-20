@@ -1,7 +1,10 @@
 const elementInputAudio = document.querySelector('.element_input_audio');
 const elementInputOffset = document.querySelector('.element_input_offset');
 const elementInputBackground = document.querySelector('.element_input_background');
+const elementInputSpectrum = document.querySelector('.element_input_spectrum');
 const elementTextareaLyrics = document.querySelector('.element_textarea_lyrics');
+const elementTextareaHeader = document.querySelector('.element_textarea_header');
+const elementTextareaFooter = document.querySelector('.element_textarea_footer');
 const elementButtonFullscreen = document.querySelector('.element_button_fullscreen');
 const elementButtonExport = document.querySelector('.element_button_export');
 const elementAudio = document.querySelector('.element_audio');
@@ -12,10 +15,14 @@ const elementCanvas = document.querySelector('.element_canvas_preview');
 let lyricsParsed = []; // parsed LRC
 let lyricsIsRecording = false;
 let lyricsIsPlaying = false;
+let lyricsRenderHeader = true;
+let lyricsRenderFooter = true;
+let lyricsRenderSpectrum = true;
 let lyricsRequestAnimationFrameID = null;
 let lyricsBackground = null;
 let lyricsFont = 'Nexa Black';
 let lyricsFileName = 'lyrics-export';
+let lyricsInstrumentalText = '♪'; // text for instrumental lines, can be changed in the textarea
 
 const lyricsFPS = 60;
 const lyricsPreviewWidth = elementCanvas.width;
@@ -26,9 +33,9 @@ const lyricsContext = elementCanvas.getContext('2d', {
 
 const clamp01 = (v) => {
     return Math.max(0, Math.min(1, v));
-}
+};
 
-const ensureAudioReady = (audio) => {
+const lyricsGetAudioReady = (audio) => {
     return new Promise((res, rej) => {
         if (audio.readyState >= 2) {
             return res()
@@ -51,6 +58,121 @@ const ensureAudioReady = (audio) => {
         audio.addEventListener('canplay', onloaded);
         audio.addEventListener('error', onerr);
     });
+};
+
+// helper: render header/footer dengan animasi fade in/out
+const lyricsRenderHeaderFooter = (drawContext, lines, nowMs, totalDuration, opts, firstRenderFlagName) => {
+    if (!lines || !lines.length) return;
+
+    drawContext.font = opts.font;
+    drawContext.textAlign = 'center';
+    drawContext.textBaseline = opts.baseline;
+
+    // hanya 1 line → tampil statis putih
+    if (lines.length === 1) {
+        drawContext.fillStyle = '#fff';
+        drawContext.globalAlpha = 0.5;
+        drawContext.fillText(lines[0], opts.x, opts.y);
+        drawContext.globalAlpha = 0.5;
+        return;
+    }
+
+    // hitung line index aktif
+    const perLineDuration = totalDuration / lines.length;
+    const nowSec = nowMs / 1000;
+    const idx = Math.floor(nowSec / perLineDuration) % lines.length;
+    const lineStart = idx * perLineDuration;
+    const progress = (nowSec - lineStart) / perLineDuration;
+
+    let alpha = 0.5;
+
+    // kalau bukan pertama load → pakai fade
+    if (!window[firstRenderFlagName]) {
+        const fadeZone = 0.2; // 20% awal/akhir
+        if (progress < fadeZone) alpha = progress / fadeZone;
+        else if (progress > 1 - fadeZone) alpha = (1 - progress) / fadeZone;
+    }
+
+    // warna: genap = kuning, ganjil = putih
+    const color = (idx % 2 === 0) ? '#ffde59' : '#fff';
+
+    drawContext.fillStyle = color;
+    drawContext.globalAlpha = alpha;
+    drawContext.fillText(lines[idx], opts.x, opts.y);
+    drawContext.globalAlpha = 0.5;
+
+    // setelah render pertama kali, matikan flag
+    if (window[firstRenderFlagName]) {
+        window[firstRenderFlagName] = false;
+    }
+};
+
+let audioCtx, analyser, source, freqData;
+
+const initAnalyser = (audioEl) => {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512; // lebih detail
+        analyser.smoothingTimeConstant = 0.1; // lebih responsif
+        source = audioCtx.createMediaElementSource(audioEl);
+
+        // tambahin gain biar lebih sensitif
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 1.0; // 2x lebih keras
+
+        source.connect(analyser);
+        analyser.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+    }
+}
+
+const renderSpectrum = (drawContext) => {
+    if (!analyser || !freqData) return;
+    analyser.getByteFrequencyData(freqData);
+
+    const numBars = 100; // jumlah bar uniform
+    const binSize = Math.floor(freqData.length / numBars);
+
+    const gap = 4;
+    const barWidth = (lyricsPreviewWidth / 2) / numBars;
+
+    const spectrumHeight = lyricsPreviewHeight * 0.1;
+    const baseY = lyricsPreviewHeight;
+
+    // threshold untuk abaikan suara kecil
+    const threshold = 20; // 0–255 (semakin tinggi → makin banyak suara kecil diabaikan)
+
+    for (let i = 0; i < numBars; i++) {
+        // rata-rata FFT dalam 1 bin
+        let sum = 0;
+        for (let j = 0; j < binSize; j++) {
+            sum += freqData[i * binSize + j];
+        }
+        let avg = sum / binSize;
+
+        // --- abaikan suara kecil ---
+        if (avg < threshold) avg = 0;
+
+        // skala miring: 100% di kiri → 2% di kanan
+        const scale = 1 - (i / (numBars - 1)) * (1 - 0.02);
+        const barHeight = (avg / 255) * spectrumHeight * scale;
+
+        const xLeft = i * barWidth;
+        const y = baseY - barHeight;
+
+        drawContext.fillStyle = `rgba(255, 222, 89, 0.8)`;
+        drawContext.shadowBlur = 20;
+        drawContext.fillRect(xLeft, y, barWidth - gap, barHeight);
+
+        // mirror kanan
+        const xRight = lyricsPreviewWidth / 2 + (numBars - i - 1) * barWidth;
+        drawContext.fillRect(xRight, y, barWidth - gap, barHeight);
+    }
+
+    drawContext.shadowBlur = 0;
 }
 
 const lyricsRender = (nowMs, drawContext) => {
@@ -120,7 +242,7 @@ const lyricsRender = (nowMs, drawContext) => {
     // --- prev line ---
     let renderPrevAlpha = 1;
     if (renderPrevText) {
-        if (renderActiveText.includes('♪')) {
+        if (renderActiveText.includes(lyricsInstrumentalText)) {
             // fade lebih cepat saat active line = ♪
             const renderFadeSpeed = 0.1; // bisa tweak (0.0–1.0)
             renderPrevAlpha = clamp01(1 - renderActiveProgress / renderFadeSpeed);
@@ -141,7 +263,7 @@ const lyricsRender = (nowMs, drawContext) => {
 
     // --- next line ---
     let renderNextAlpha = renderActiveProgress; // default fade in
-    if (renderActiveText.includes('♪')) {
+    if (renderActiveText.includes(lyricsInstrumentalText)) {
         // tahan alpha sampai hampir habis durasi instrumental
         const renderRemaining = renderCurrentEnd - renderTime;
         const renderFadeDuration = Math.min(500, renderCurrentEnd - renderCurrentStart); // fade in last 0.5s atau durasi sisa
@@ -152,6 +274,32 @@ const lyricsRender = (nowMs, drawContext) => {
         drawContext.fillStyle = '#fff';
         drawContext.globalAlpha = renderNextAlpha;
         drawContext.fillText(renderNextText, lyricsPreviewWidth / 2, renderNextY);
+    }
+
+    // --- header text ---
+    if (elementTextareaHeader && elementTextareaHeader.value.trim()) {
+        const headerLines = elementTextareaHeader.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        lyricsRenderHeaderFooter(drawContext, headerLines, renderTime, elementAudio.duration, {
+            font: `48px "${lyricsFont}", Inter, sans-serif`,
+            x: lyricsPreviewWidth / 2,
+            y: 120, // margin atas
+            baseline: 'top'
+        });
+    }
+
+    // --- footer text (multi-line bergantian) ---
+    if (elementTextareaFooter && elementTextareaFooter.value.trim()) {
+        const footerLines = elementTextareaFooter.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        lyricsRenderHeaderFooter(drawContext, footerLines, renderTime, elementAudio.duration, {
+            font: `32px "${lyricsFont}", Inter, sans-serif`,
+            x: lyricsPreviewWidth / 2,
+            y: lyricsPreviewHeight - 120, // margin bawah
+            baseline: 'bottom'
+        });
+    }
+
+    if (lyricsRenderSpectrum) {
+        renderSpectrum(drawContext);
     }
 
     drawContext.globalAlpha = 1.0;
@@ -225,7 +373,7 @@ elementInputAudio.addEventListener('change', (event) => {
 
     elementAudio.src = URL.createObjectURL(file);
     elementAudio.load();
-
+    initAnalyser(elementAudio);
     lyricsFileName = `${file.name.replace(/\.[^/.]+$/, '')}`;
 });
 
@@ -246,6 +394,18 @@ elementTextareaLyrics.addEventListener('input', () => {
     lyricsParsed = lyricsParse(elementTextareaLyrics.value);
 
     lyricsRender(elementAudio.currentTime * 1000, lyricsContext);
+});
+
+elementTextareaHeader.addEventListener('input', () => {
+    if (!lyricsIsPlaying) {
+        lyricsRender(elementAudio.currentTime * 1000, lyricsContext);
+    }
+});
+
+elementTextareaFooter.addEventListener('input', () => {
+    if (!lyricsIsPlaying) {
+        lyricsRender(elementAudio.currentTime * 1000, lyricsContext);
+    }
 });
 
 elementInputOffset.addEventListener('input', () => {
@@ -317,7 +477,7 @@ elementButtonExport.addEventListener('click', async () => {
 
     try {
         // ensure font is ready before export
-        await ensureAudioReady(elementAudio);
+        await lyricsGetAudioReady(elementAudio);
 
         // prepare offscreen canvas
         const canvas = document.createElement('canvas');
@@ -325,7 +485,8 @@ elementButtonExport.addEventListener('click', async () => {
         canvas.height = lyricsPreviewHeight;
 
         const cctx = canvas.getContext('2d', {
-            alpha: true
+            alpha: true,
+            desynchronized: true // minta pipeline low-latency (GPU-friendly)
         });
 
         // capture streams and audio
@@ -434,6 +595,14 @@ elementButtonExport.addEventListener('click', async () => {
     }
 });
 
+elementInputSpectrum.addEventListener('change', (event) => {
+    lyricsRenderSpectrum = event.target.checked;
+
+    if (!lyricsIsPlaying) {
+        lyricsRender(elementAudio.currentTime * 1000, lyricsContext);
+    }
+});
+
 elementAudio.addEventListener('play', lyricsPreviewStart);
 elementAudio.addEventListener('pause', lyricsPreviewStop);
 elementAudio.addEventListener('seeked', () => lyricsRender(elementAudio.currentTime * 1000, lyricsContext));
@@ -452,3 +621,5 @@ window.addEventListener('beforeunload', (event) => {
         return '';
     }
 });
+
+

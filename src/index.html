@@ -57,6 +57,24 @@
                             <button id="element_button_export" type="button" class="element_button_export cursor-pointer rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-800">Record</button>
                         </div>
                     </div>
+
+                    <div class="mb-4 grid w-full grid-cols-1 gap-4 last:mb-0 lg:grid-cols-2">
+                        <label class="line-clamp-1 flex cursor-text flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Header Text</span>
+                            <textarea id="element_textarea_header" class="element_textarea_header h-20 w-full rounded border bg-zinc-50 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-700" placeholder="Header Text"></textarea>
+                        </label>
+
+                        <label class="line-clamp-1 flex cursor-text flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Footer Text</span>
+                            <textarea id="element_textarea_footer" class="element_textarea_footer h-20 w-full rounded border bg-zinc-50 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-700" placeholder="Footer Text"></textarea>
+                        </label>
+
+                        <!-- Tambahan checkbox enable spectrum -->
+                        <div class="mb-4 flex items-center gap-2">
+                            <input id="element_input_spectrum" type="checkbox" class="element_input_spectrum h-4 w-4 cursor-pointer rounded border border-zinc-500" checked />
+                            <label for="element_input_spectrum" class="cursor-pointer text-sm">Enable Spectrum</label>
+                        </div>
+                    </div>
                 </section>
             </main>
         </div>

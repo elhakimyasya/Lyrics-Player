@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Lyrics Player | Yasya El Hakim</title>
+        <link rel="stylesheet" href=".././dist/styles/style.min.css" />
+    </head>
+    <body class="flex min-h-dvh items-center justify-center bg-zinc-900 p-3 text-zinc-100 lg:p-6">
+        <div class="flex w-full max-w-4xl flex-col items-center justify-center">
+            <header class="mb-6 flex flex-row items-center justify-between last:mb-0">
+                <h1 class="text-xl font-semibold">Lyrics Player</h1>
+            </header>
+
+            <main class="flex w-full flex-col items-start justify-center rounded-lg bg-zinc-800 p-3 shadow lg:p-6">
+                <section class="mb-4 flex w-full flex-col items-start justify-center last:mb-0">
+                    <div class="mb-4 grid w-full grid-cols-1 gap-4 last:mb-0 lg:grid-cols-2">
+                        <label class="line-clamp-1 flex cursor-pointer flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Audio</span>
+                            <input id="element_input_audio" class="element_input_audio cursor-pointer appearance-none rounded border border-zinc-500 px-4 py-2" type="file" accept="audio/*" />
+                        </label>
+
+                        <label class="flex cursor-pointer flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Background (Image/Video)</span>
+                            <input id="element_input_background" class="element_input_background cursor-pointer appearance-none rounded border border-zinc-500 px-4 py-2" type="file" accept="image/*,video/*" />
+                        </label>
+
+                        <label class="flex cursor-pointer flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Lyrics Offset (Second)</span>
+                            <input id="element_input_offset" type="number" value="0" class="element_input_offset cursor-text appearance-none rounded border border-zinc-500 px-4 py-2" />
+                        </label>
+                    </div>
+                </section>
+
+                <section class="mb-4 flex w-full flex-col items-start justify-center last:mb-0">
+                    <div class="mb-4 grid w-full grid-cols-1 items-start gap-4 last:mb-0 lg:grid-cols-2">
+                        <label class="line-clamp-1 flex cursor-text flex-col justify-center text-sm">
+                            <span class="mb-2 font-semibold">Timestamp Lyrics</span>
+                            <textarea id="element_textarea_lyrics" class="element_textarea_lyrics h-56 w-full rounded border bg-zinc-50 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-700" placeholder="Timestamp Lyrics"></textarea>
+                        </label>
+
+                        <div class="flex w-full flex-col items-start justify-center">
+                            <div class="mb-2 line-clamp-1 flex cursor-text flex-col justify-center text-sm font-semibold">Preview</div>
+                            <div id="preview" class="preview-wrap relative aspect-video overflow-hidden rounded-lg bg-transparent">
+                                <canvas id="element_canvas_preview" class="element_canvas_preview block h-auto w-full bg-transparent" width="1920" height="1080"></canvas>
+
+                                <div id="bgContainer" class="hidden" aria-hidden="true"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="element_container_controll mb-4 hidden w-full grid-cols-1 items-center gap-4 last:mb-0 lg:grid-cols-2">
+                        <audio id="element_audio" class="element_audio h-full max-h-11 w-full rounded bg-transparent" controls=""></audio>
+
+                        <div id="playerControls" class="grid w-full grid-cols-2 items-center gap-2">
+                            <button id="element_button_fullscreen" type="button" class="element_button_fullscreen cursor-pointer rounded bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:ring-4 focus:ring-gray-800">Fullscreen</button>
+                            <button id="element_button_export" type="button" class="element_button_export cursor-pointer rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-800">Record</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </body>
+
+    <script src="../dist/scripts/script.min.js"></script>
+</html>

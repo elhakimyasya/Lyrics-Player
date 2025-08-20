@@ -1,0 +1,44 @@
+{
+  "name": "lyrics-player",
+  "version": "1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently 'npm:watch:webpack' 'npm:watch:tailwind'",
+    "build": "concurrently 'npm:build:webpack' 'npm:build:tailwind'",
+    "package-update": "ncu -u --reject gulp-autoprefixer && npm install",
+    "build:webpack": "webpack --mode=production",
+    "build:tailwind": "npx @tailwindcss/cli -i src/styles/style.css -o dist/styles/style.min.css --minify",
+    "watch:webpack": "webpack --mode=development --watch",
+    "watch:tailwind": "npx @tailwindcss/cli -i src/styles/style.css -o dist/styles/style.min.css --watch"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Yasya El Hakim",
+    "email": "yasyaelhakim@gmail.com",
+    "url": "https://elcreative.org/"
+  },
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.0",
+    "autoprefixer": "^10.4.21",
+    "babel-loader": "^10.0.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "babel-plugin-transform-remove-debugger": "^6.9.4",
+    "concurrently": "^9.2.0",
+    "gulp": "^5.0.1",
+    "gulp-cli": "^3.1.0",
+    "gulp-htmlmin": "^5.0.1",
+    "gulp-ignore": "^3.0.0",
+    "gulp-zip": "^6.1.0",
+    "npm-check-updates": "^18.0.2",
+    "package-update": "^1.0.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tailwindcss": "^4.1.11",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1",
+    "webpack-stream": "^7.0.0"
+  }
+}

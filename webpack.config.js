@@ -5,7 +5,6 @@ module.exports = {
     mode: 'production',
     entry: {
         'script': './src/scripts/script.js',
-        'background': './src/scripts/background.js',
     },
     output: {
         clean: false,

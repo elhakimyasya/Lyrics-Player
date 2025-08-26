@@ -1,5 +1,5 @@
 import { lyricsParse } from "./modules/lyricsParse";
-import { lyricsGetAudio, lyricsRender, lyricsRenderStart, lyricsRenderStop } from "./modules/lyricsRender";
+import { lyricsGetAudio, lyricsRender, lyricsRenderLoop } from "./modules/lyricsRender";
 import { lyricsRenderAnalyzer } from "./modules/lyricsRenderSpectrum";
 
 export const settings = {
@@ -52,6 +52,25 @@ settings.lyricsContext = elementCanvas.getContext('2d', {
     alpha: true
 });
 
+// persistence helpers
+const storageSave = (key, value) => {
+    localStorage.setItem(key, value);
+};
+
+const storageLoad = (key, fallback = '') => {
+    return localStorage.getItem(key) ?? fallback;
+};
+
+// restore persisted values
+elementTextareaLyrics.value = storageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line');
+settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
+
+elementTextareaHeader.value = storageLoad('lyrics_header', '');
+elementTextareaFooter.value = storageLoad('lyrics_footer', '');
+
+// render awal
+lyricsRender(0, settings.lyricsContext);
+
 elementInputAudio.addEventListener('change', (event) => {
     const file = event.target.files && event.target.files[0];
     if (!file) {
@@ -79,20 +98,23 @@ elementAudio.addEventListener('loadedmetadata', () => {
 
 elementTextareaLyrics.addEventListener('input', () => {
     settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
-
     lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
+
+    storageSave('lyrics_textarea', elementTextareaLyrics.value);
 });
 
 elementTextareaHeader.addEventListener('input', () => {
     if (!settings.lyricsIsPlaying) {
         lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
     }
+    storageSave('lyrics_header', elementTextareaHeader.value);
 });
 
 elementTextareaFooter.addEventListener('input', () => {
     if (!settings.lyricsIsPlaying) {
         lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
     }
+    storageSave('lyrics_footer', elementTextareaFooter.value);
 });
 
 elementInputOffset.addEventListener('input', () => {
@@ -184,7 +206,6 @@ elementButtonExport.addEventListener('click', async () => {
                 audioStream = elementAudio.captureStream();
             } catch (error) {
                 console.log('Error capturing audio stream:', error);
-
                 audioStream = null;
             }
         }
@@ -215,7 +236,6 @@ elementButtonExport.addEventListener('click', async () => {
                 recorder = new MediaRecorder(composed, { mimeType: m }); break;
             } catch (error) {
                 console.log(`MediaRecorder with mimeType "${m}" failed:`, error);
-
                 recorder = null;
             }
         }
@@ -256,8 +276,6 @@ elementButtonExport.addEventListener('click', async () => {
         // render loop (use same lyricsRender, but with cctx)
         const frameInterval = Math.round(1000 / settings.lyricsFPS);
         const renderInterval = setInterval(() => {
-            // draw background (if video/image present draw it in lyricsRender)
-            // call lyricsRender with current audio time using cctx
             lyricsRender(elementAudio.currentTime * 1000, cctx);
 
             if (elementAudio.ended || elementAudio.currentTime >= elementAudio.duration - 0.05) {
@@ -290,24 +308,34 @@ elementInputSpectrum.addEventListener('change', (event) => {
     }
 });
 
-elementAudio.addEventListener('play', lyricsRenderStart);
-elementAudio.addEventListener('pause', lyricsRenderStop);
+elementAudio.addEventListener('play', (event) => {
+    event.preventDefault();
+
+    if (settings.lyricsRequestAnimationFrameID) {
+        cancelAnimationFrame(settings.lyricsRequestAnimationFrameID)
+    };
+
+    settings.lyricsRequestAnimationFrameID = requestAnimationFrame(lyricsRenderLoop);
+    settings.lyricsIsPlaying = true;
+});
+
+elementAudio.addEventListener('pause', (event) => {
+    event.preventDefault();
+
+    if (settings.lyricsRequestAnimationFrameID) {
+        cancelAnimationFrame(settings.lyricsRequestAnimationFrameID);
+
+        settings.lyricsRequestAnimationFrameID = null;
+        settings.lyricsIsPlaying = false
+    };
+});
+
 elementAudio.addEventListener('seeked', () => lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext));
-
-// example initial LRC
-elementTextareaLyrics.value = '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line';
-settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
-
-lyricsRender(0, settings.lyricsContext);
 
 window.addEventListener('beforeunload', (event) => {
     if (settings.lyricsIsRecording) {
         event.preventDefault();
-        // Chrome/Edge butuh returnValue
         event.returnValue = '';
-
         return '';
     }
 });
-
-

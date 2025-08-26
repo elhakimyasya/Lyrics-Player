@@ -1,54 +1,48 @@
 import { settings } from "../script";
 
 export const lyricsRenderSpectrum = (drawContext) => {
-    if (!settings.lyricsSpectrumAnalyser || !settings.lyricsSpectrumFrequencyData) {
-        return;
-    };
+    if (!settings.lyricsSpectrumAnalyser || !settings.lyricsSpectrumFrequencyData) return;
     
-    drawContext.globalAlpha = 1.0; // pastikan alpha normal
-
     settings.lyricsSpectrumAnalyser.getByteFrequencyData(settings.lyricsSpectrumFrequencyData);
 
-    const barsNumber = 80; // jumlah bar uniform
+    const barsNumber = 80;
     const binSize = Math.floor(settings.lyricsSpectrumFrequencyData.length / barsNumber);
 
-    const barGap = 4;
+    const barGap = 3;
     const barWidth = (settings.lyricsPreviewWidth / 2) / barsNumber;
 
-    const spectrumHeight = settings.lyricsPreviewHeight * 0.1;
+    const spectrumHeight = settings.lyricsPreviewHeight * 0.12;
     const baseY = settings.lyricsPreviewHeight;
+    const barThresold = 5;
 
-    // barThresold untuk abaikan suara kecil
-    const barThresold = 5; // 0–255 (semakin tinggi → makin banyak suara kecil diabaikan)
+    // bikin gradient 1x aja, bukan per-bar
+    const gradient = drawContext.createLinearGradient(0, baseY, 0, baseY - spectrumHeight);
+    gradient.addColorStop(0, "rgba(255,222,89,0.1)");
+    gradient.addColorStop(1, "rgba(255,222,89,0.9)");
+    drawContext.fillStyle = gradient;
 
     for (let i = 0; i < barsNumber; i++) {
-        // rata-rata FFT dalam 1 bin
-        let sum = 0;
+        // pakai max biar gak berat
+        let max = 0;
         for (let j = 0; j < binSize; j++) {
-            sum += settings.lyricsSpectrumFrequencyData[i * binSize + j];
+            const v = settings.lyricsSpectrumFrequencyData[i * binSize + j];
+            if (v > max) max = v;
         }
-        let avg = sum / binSize;
+        let avg = max;
 
-        // --- abaikan suara kecil ---
         if (avg < barThresold) avg = 0;
 
-        // skala miring: 100% di kiri → 2% di kanan
-        const scale = 1 - (i / (barsNumber - 1)) * (1 - 0.02);
+        const scale = 1 - (i / (barsNumber - 1)) * 0.98;
         const barHeight = (avg / 255) * spectrumHeight * scale;
 
         const xLeft = i * barWidth;
         const y = baseY - barHeight;
 
-        drawContext.fillStyle = `rgba(255, 222, 89, 0.5)`;
-        drawContext.shadowBlur = 8;
         drawContext.fillRect(xLeft, y, barWidth - barGap, barHeight);
 
-        // mirror kanan
         const xRight = settings.lyricsPreviewWidth / 2 + (barsNumber - i - 1) * barWidth;
         drawContext.fillRect(xRight, y, barWidth - barGap, barHeight);
     }
-
-    drawContext.shadowBlur = 0;
 }
 
 export const lyricsRenderAnalyzer = (audioEl) => {

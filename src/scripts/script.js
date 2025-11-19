@@ -61,8 +61,70 @@ const storageLoad = (key, fallback = '') => {
     return localStorage.getItem(key) ?? fallback;
 };
 
+const normalizeLyrics = (text) => {
+    if (!text) {
+        return ''
+    };
+
+    // Normalisasi Unicode NFC menghilangkan karakter combining aneh
+    text = text.normalize('NFC');
+
+    // Hilangkan control characters (kecuali newline)
+    text = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+
+    // Konversi karakter 'confusable' (huruf mirip) ke bentuk latin asli
+    const confusables = {
+        "е": "e",
+        "Е": "E",
+        "о": "o",
+        "О": "O",
+        "ӏ": "l",
+        "І": "I",
+        "ı": "i",
+        "ѕ": "s",
+        "ᴀ": "A",
+        "ʙ": "B",
+        "ᴄ": "C",
+        "ᴇ": "E",
+        "ɢ": "G",
+        "ʜ": "H",
+        "ɪ": "I",
+        "ᴊ": "J",
+        "ᴋ": "K",
+        "ʟ": "L",
+        "ᴍ": "M",
+        "ɴ": "N",
+        "ᴏ": "O",
+        "ᴘ": "P",
+        "ʀ": "R",
+        "ᴛ": "T",
+        "ᴜ": "U",
+        "ᴡ": "W",
+        "ʏ": "Y",
+        "ᴢ": "Z",
+        "∕": "/",
+        "꞉": ":"
+    };
+
+    text = text.replace(/./g, char => confusables[char] || char);
+
+    // Hilangkan ZERO-WIDTH CHARACTERS (sumber masalah di copy/paste)
+    text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+    // Hilangkan karakter yang tidak terlihat (formatting weird chars)
+    text = text.replace(/[\u2060-\u206F]/g, '');
+
+    // Normalisasi spasi menjadi satu
+    text = text.replace(/\s+/g, ' ');
+
+    // Trim
+    text = text.trim();
+
+    return text;
+}
+
 // restore persisted values
-elementTextareaLyrics.value = storageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line');
+elementTextareaLyrics.value = normalizeLyrics(storageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line'));
 settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
 
 elementTextareaHeader.value = storageLoad('lyrics_header', '');
@@ -102,6 +164,17 @@ elementTextareaLyrics.addEventListener('input', () => {
 
     storageSave('lyrics_textarea', elementTextareaLyrics.value);
 });
+
+elementTextareaLyrics.addEventListener('input', () => {
+    const normalized = normalizeLyrics(elementTextareaLyrics.value);
+
+    elementTextareaLyrics.value = normalized;
+    settings.lyricsParsed = lyricsParse(normalized);
+    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
+
+    storageSave('lyrics_textarea', normalized);
+});
+
 
 elementTextareaHeader.addEventListener('input', () => {
     if (!settings.lyricsIsPlaying) {

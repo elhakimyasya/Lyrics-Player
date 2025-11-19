@@ -33,7 +33,7 @@ export const settings = {
     lyricsFont: 'Nexa Black',
     lyricsInstrumentalText: '♪',
     lyricsFileName: 'lyrics-export',
-}
+};
 
 const elementInputOffset = document.querySelector(settings.elementInputOffset);
 const elementInputSpectrum = document.querySelector(settings.elementInputSpectrum);
@@ -66,62 +66,32 @@ const normalizeLyrics = (text) => {
         return ''
     };
 
-    // Normalisasi Unicode NFC menghilangkan karakter combining aneh
-    text = text.normalize('NFC');
+    text = text.normalize('NFC'); // Normalisasi unicode
+    text = text.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, ''); // Hapus control characters KECUALI \n (000A) dan \r (000D)
+    text = text.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Hapus zero-width characters
+    text = text.replace(/[\u2060-\u206F]/g, ''); // Hapus formatting invis chars
 
-    // Hilangkan control characters (kecuali newline)
-    text = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
-
-    // Konversi karakter 'confusable' (huruf mirip) ke bentuk latin asli
+    // Konversi confusable characters
     const confusables = {
-        "е": "e",
-        "Е": "E",
-        "о": "o",
-        "О": "O",
+        "е": "e", "Е": "E",
+        "о": "o", "О": "O",
         "ӏ": "l",
         "І": "I",
         "ı": "i",
         "ѕ": "s",
-        "ᴀ": "A",
-        "ʙ": "B",
-        "ᴄ": "C",
-        "ᴇ": "E",
-        "ɢ": "G",
-        "ʜ": "H",
-        "ɪ": "I",
-        "ᴊ": "J",
-        "ᴋ": "K",
-        "ʟ": "L",
-        "ᴍ": "M",
-        "ɴ": "N",
-        "ᴏ": "O",
-        "ᴘ": "P",
-        "ʀ": "R",
-        "ᴛ": "T",
-        "ᴜ": "U",
-        "ᴡ": "W",
-        "ʏ": "Y",
-        "ᴢ": "Z",
-        "∕": "/",
-        "꞉": ":"
+        "ᴀ": "A", "ʙ": "B", "ᴄ": "C", "ᴇ": "E",
+        "ɢ": "G", "ʜ": "H", "ɪ": "I", "ᴊ": "J",
+        "ᴋ": "K", "ʟ": "L", "ᴍ": "M", "ɴ": "N",
+        "ᴏ": "O", "ᴘ": "P", "ʀ": "R", "ᴛ": "T",
+        "ᴜ": "U", "ᴡ": "W", "ʏ": "Y", "ᴢ": "Z",
+        "∕": "/", "꞉": ":"
     };
 
     text = text.replace(/./g, char => confusables[char] || char);
-
-    // Hilangkan ZERO-WIDTH CHARACTERS (sumber masalah di copy/paste)
-    text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
-
-    // Hilangkan karakter yang tidak terlihat (formatting weird chars)
-    text = text.replace(/[\u2060-\u206F]/g, '');
-
-    // Normalisasi spasi menjadi satu
-    text = text.replace(/\s+/g, ' ');
-
-    // Trim
-    text = text.trim();
+    text = text.split(/\r?\n/).map(line => line.replace(/ +/g, ' ').trim()).join('\n'); // Bersihkan spasi dalam 1 baris, tanpa ganggu newline
 
     return text;
-}
+};
 
 // restore persisted values
 elementTextareaLyrics.value = normalizeLyrics(storageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line'));
@@ -156,13 +126,6 @@ elementButtonFullscreen.addEventListener('click', (event) => {
 elementAudio.addEventListener('loadedmetadata', () => {
     elementContainerControll.classList.add('grid');
     elementContainerControll.classList.remove('hidden');
-});
-
-elementTextareaLyrics.addEventListener('input', () => {
-    settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
-    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-
-    storageSave('lyrics_textarea', elementTextareaLyrics.value);
 });
 
 elementTextareaLyrics.addEventListener('input', () => {

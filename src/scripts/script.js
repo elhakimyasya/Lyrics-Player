@@ -138,7 +138,6 @@ elementTextareaLyrics.addEventListener('input', () => {
     storageSave('lyrics_textarea', normalized);
 });
 
-
 elementTextareaHeader.addEventListener('input', () => {
     if (!settings.lyricsIsPlaying) {
         lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
@@ -366,7 +365,9 @@ elementAudio.addEventListener('pause', (event) => {
     };
 });
 
-elementAudio.addEventListener('seeked', () => lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext));
+elementAudio.addEventListener('seeked', () => {
+    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext)
+});
 
 window.addEventListener('beforeunload', (event) => {
     if (settings.lyricsIsRecording) {

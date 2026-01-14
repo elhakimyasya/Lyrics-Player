@@ -1,235 +1,183 @@
-import { settings } from "../script";
+import { lyricsSettings } from "./lyricsSettings";
 import { lyricsRenderSpectrum } from "./lyricsRenderSpectrum";
+import { lyricsRenderHeaderFooter } from "./lyricsRenderHeaderFooter";
 
-export const lyricsRender = (nowMs, drawContext) => {
-    const elementTextareaHeader = document.querySelector(settings.elementTextareaHeader);
-    const elementTextareaFooter = document.querySelector(settings.elementTextareaFooter);
-    const elementAudio = document.querySelector(settings.elementAudio);
+const drawResourceCover = (ctx, resource, canvasWidth, canvasHeight) => {
+    const element = resource.element;
+    const rWidth = resource.type === 'video' ? element.videoWidth : element.width;
+    const rHeight = resource.type === 'video' ? element.videoHeight : element.height;
+    if (!rWidth || !rHeight) return;
 
-    const renderOffset = (parseFloat(document.querySelector(settings.elementInputOffset).value) || 0) * 1000;
-    const renderTime = nowMs + renderOffset;
+    const rRatio = rWidth / rHeight;
+    const cRatio = canvasWidth / canvasHeight;
+    let drawW, drawH, offsetX, offsetY;
 
-    drawContext.clearRect(0, 0, settings.lyricsPreviewWidth, settings.lyricsPreviewHeight);
-    if (settings.lyricsBackground) {
-        try {
-            drawContext.drawImage(settings.lyricsBackground.el, 0, 0, settings.lyricsPreviewWidth, settings.lyricsPreviewHeight);
-        } catch (error) {
-            console.log('Error drawing background:', error);
+    if (rRatio > cRatio) {
+        drawH = canvasHeight;
+        drawW = canvasHeight * rRatio;
+        offsetX = (canvasWidth - drawW) / 2;
+        offsetY = 0;
+    } else {
+        drawW = canvasWidth;
+        drawH = canvasWidth / rRatio;
+        offsetX = 0;
+        offsetY = (canvasHeight - drawH) / 2;
+    }
+    ctx.drawImage(element, offsetX, offsetY, drawW, drawH);
+};
+
+export const lyricsRender = (currentTimeMs, drawContext) => {
+    const domInputOffset = document.querySelector(lyricsSettings.elementSelectorInputOffset);
+    const domAudioPlayer = document.querySelector(lyricsSettings.elementSelectorAudio);
+    const timeOffsetMs = (parseFloat(domInputOffset?.value) || 0) * 1000;
+    const adjustedRenderTime = currentTimeMs + timeOffsetMs;
+
+    // --- LOGIKA PERBAIKAN VIDEO PLAYBACK ---
+    if (lyricsSettings.lyricsResourceBackground?.type === 'video') {
+        const vid = lyricsSettings.lyricsResourceBackground.element;
+        if (vid.paused && !vid.ended) {
+            vid.muted = true; // Wajib muted agar diizinkan browser
+            vid.playsInline = true;
+            vid.play().catch(e => console.warn("Menunggu interaksi user untuk video:", e));
         }
-
-        drawContext.fillStyle = 'rgba(0, 0, 0, 0.12)';
-        drawContext.fillRect(0, 0, settings.lyricsPreviewWidth, settings.lyricsPreviewHeight);
     }
+    // ---------------------------------------
 
-    if (!settings.lyricsParsed.length) {
-        drawContext.fillStyle = '#000';
-        drawContext.font = `76px "${settings.lyricsFont}", Inter, sans-serif`;
-        drawContext.textAlign = 'center';
-        drawContext.textBaseline = 'middle';
-        drawContext.fillText('—', settings.lyricsPreviewWidth / 2, settings.lyricsPreviewHeight / 2);
+    const bgColor = lyricsSettings.lyricsBgColor;
+    const keyColor = lyricsSettings.lyricsKeyColor;
 
-        return;
-    }
+    drawContext.clearRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
 
-    // cari index active
-    let renderIndexActiveLine = -1;
-    for (let index = 0; index < settings.lyricsParsed.length; index++) {
-        if (settings.lyricsParsed[index].timeMs <= renderTime) {
-            renderIndexActiveLine = index;
-        } else {
-            break
+    // 1. Identifikasi Baris Aktif
+    let activeLineIndex = -1;
+    const totalLines = lyricsSettings.lyricsDataParsed.length;
+    if (totalLines > 0) {
+        for (let i = 0; i < totalLines; i++) {
+            if (lyricsSettings.lyricsDataParsed[i].timeMs <= adjustedRenderTime) activeLineIndex = i;
+            else break;
         }
     }
+    if (activeLineIndex < 0 && totalLines > 0) activeLineIndex = 0;
 
-    if (renderIndexActiveLine < 0) {
-        renderIndexActiveLine = 0
-    };
+    // 2. Setup Data
+    const currentLineStart = totalLines > 0 ? lyricsSettings.lyricsDataParsed[activeLineIndex].timeMs : 0;
+    const currentLineEnd = (activeLineIndex + 1 < totalLines)
+        ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs
+        : (domAudioPlayer.duration * 1000);
 
-    const renderCurrentStart = settings.lyricsParsed[renderIndexActiveLine].timeMs;
-    const renderCurrentEnd = settings.lyricsParsed[renderIndexActiveLine + 1] ? settings.lyricsParsed[renderIndexActiveLine + 1].timeMs : elementAudio.duration * 1000;
-    const renderActiveProgress = Math.max(0, Math.min(1, (renderTime - renderCurrentStart) / (renderCurrentEnd - renderCurrentStart)))
+    const timeUntilNextLine = currentLineEnd - adjustedRenderTime;
+    const textActive = activeLineIndex >= 0 ? (lyricsSettings.lyricsDataParsed[activeLineIndex]?.text || '') : '';
+    const textNext = (activeLineIndex + 1 < totalLines) ? (lyricsSettings.lyricsDataParsed[activeLineIndex + 1].text || '') : '';
+    const textPrevious = (activeLineIndex > 0) ? lyricsSettings.lyricsDataParsed[activeLineIndex - 1].text : '';
 
-    const renderLineSpacing = 120;
-    const renderBaseActiveY = settings.lyricsPreviewHeight * 0.55;
-    const renderBasePrevY = renderBaseActiveY - renderLineSpacing;
-    const renderBaseNextY = renderBaseActiveY + renderLineSpacing;
-    const renderScrollOffset = renderActiveProgress * renderLineSpacing;
+    // 3. Logika Fade Background & Ending
+    const isCurrentInstrumental = textActive.includes(lyricsSettings.lyricsInstrumentalSymbol);
+    const isEnding = (activeLineIndex >= totalLines - 2 && textActive.trim() === '' && textNext.trim() === '');
+    
+    let targetOpacity = 0.9;
+    if (isCurrentInstrumental || isEnding) targetOpacity = 0.0;
 
-    const renderPrevY = renderBasePrevY - renderScrollOffset;
-    const renderActiveY = renderBaseActiveY - renderScrollOffset;
-    const renderNextY = renderBaseNextY - renderScrollOffset;
+    const speed = lyricsSettings.lyricsFadeSpeed || 0.05;
+    if (lyricsSettings.lyricsBackgroundCurrentOpacity > targetOpacity) {
+        lyricsSettings.lyricsBackgroundCurrentOpacity = Math.max(targetOpacity, lyricsSettings.lyricsBackgroundCurrentOpacity - speed);
+    } else {
+        lyricsSettings.lyricsBackgroundCurrentOpacity = Math.min(targetOpacity, lyricsSettings.lyricsBackgroundCurrentOpacity + speed);
+    }
+
+    const r = parseInt(bgColor.slice(1, 3), 16);
+    const g = parseInt(bgColor.slice(3, 5), 16);
+    const b = parseInt(bgColor.slice(5, 7), 16);
+
+    // 4. Render Background
+    drawContext.save();
+    if (lyricsSettings.lyricsResourceBackground) {
+        drawResourceCover(drawContext, lyricsSettings.lyricsResourceBackground, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
+        drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, ${lyricsSettings.lyricsBackgroundCurrentOpacity})`;
+        drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
+        
+        if (lyricsSettings.lyricsBackgroundCurrentOpacity < 0.5) {
+            drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, 0.15)`;
+            drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
+        }
+    } else {
+        drawContext.fillStyle = bgColor;
+        drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
+    }
+    drawContext.restore();
+
+    // 5. Header & Footer
+    const hfAlpha = Math.max(0, (lyricsSettings.lyricsBackgroundCurrentOpacity / 0.9));
+    
+    const domHeader = document.querySelector(lyricsSettings.elementSelectorTextareaHeader);
+    if (domHeader?.value.trim() && hfAlpha > 0.01) {
+        drawContext.save();
+        drawContext.globalAlpha = hfAlpha;
+        const lines = domHeader.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        lyricsRenderHeaderFooter(drawContext, lines, adjustedRenderTime, {
+            font: `48px "${lyricsSettings.lyricsFontFace}", sans-serif`,
+            x: lyricsSettings.lyricsPreviewWidth / 2, y: 120, baseline: 'top'
+        });
+        drawContext.restore();
+    }
+
+    const domFooter = document.querySelector(lyricsSettings.elementSelectorTextareaFooter);
+    if (domFooter?.value.trim() && hfAlpha > 0.01) {
+        drawContext.save();
+        drawContext.globalAlpha = hfAlpha;
+        const lines = domFooter.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        lyricsRenderHeaderFooter(drawContext, lines, adjustedRenderTime, {
+            font: `32px "${lyricsSettings.lyricsFontFace}", sans-serif`,
+            x: lyricsSettings.lyricsPreviewWidth / 2, y: lyricsSettings.lyricsPreviewHeight - 120, baseline: 'bottom'
+        });
+        drawContext.restore();
+    }
+
+    if (totalLines === 0) return;
+
+    // 6. Render Lirik
+    const animProgress = Math.max(0, Math.min(1, (adjustedRenderTime - currentLineStart) / (currentLineEnd - currentLineStart)));
+    const lineSpacing = 120;
+    const yBase = lyricsSettings.lyricsPreviewHeight * 0.55;
+    const scroll = animProgress * lineSpacing;
 
     drawContext.textAlign = 'center';
     drawContext.textBaseline = 'middle';
 
-    const renderActiveText = settings.lyricsParsed[renderIndexActiveLine] ? settings.lyricsParsed[renderIndexActiveLine].text : '';
-    const renderPrevText = settings.lyricsParsed[renderIndexActiveLine - 1] ? settings.lyricsParsed[renderIndexActiveLine - 1].text : '';
-    const renderNextText = settings.lyricsParsed[renderIndexActiveLine + 1] ? settings.lyricsParsed[renderIndexActiveLine + 1].text : '';
-
-    // prev line
-    let renderPrevAlpha = 1;
-    if (renderPrevText) {
-        if (renderActiveText.includes(settings.lyricsInstrumentalText)) {
-            const renderFadeSpeed = 0.1;
-            renderPrevAlpha = Math.max(0, Math.min(1, 1 - renderActiveProgress / renderFadeSpeed));
-        } else {
-            renderPrevAlpha = 1 - renderActiveProgress;
-        }
-
-        const isItalicPrev = /^\(.*\)$/.test(renderPrevText);
-        drawContext.font = `${isItalicPrev ? "italic " : ""}82px "${settings.lyricsFont}", Inter, sans-serif`;
-        drawContext.fillStyle = '#fff';
-        drawContext.globalAlpha = renderPrevAlpha;
-        drawContext.fillText(
-            renderPrevText,
-            settings.lyricsPreviewWidth / 2,
-            renderPrevY
-        );
+    // Previous Line (Menghilang cepat saat instrumental/ending)
+    if (textPrevious) {
+        drawContext.save();
+        const pAlpha = (isCurrentInstrumental || isEnding) 
+            ? Math.max(0, (1 - ((adjustedRenderTime - currentLineStart) / 300)) * 0.5)
+            : (1 - animProgress) * 0.5;
+        drawContext.font = `${/^\(.*\)$/.test(textPrevious) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
+        drawContext.fillStyle = '#ffffff';
+        drawContext.globalAlpha = pAlpha;
+        drawContext.fillText(textPrevious, lyricsSettings.lyricsPreviewWidth / 2, (yBase - lineSpacing) - scroll);
+        drawContext.restore();
     }
 
-    // active line
-    const isItalicActive = /^\(.*\)$/.test(renderActiveText);
-    drawContext.font = `${isItalicActive ? "italic " : ""}82px "${settings.lyricsFont}", Inter, sans-serif`;
-    drawContext.fillStyle = '#ffde59';
-    drawContext.globalAlpha = 1.0;
-    drawContext.fillText(
-        renderActiveText,
-        settings.lyricsPreviewWidth / 2,
-        renderActiveY
-    );
+    // Active Line
+    drawContext.save();
+    drawContext.font = `${/^\(.*\)$/.test(textActive) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
+    drawContext.fillStyle = keyColor;
+    drawContext.fillText(textActive, lyricsSettings.lyricsPreviewWidth / 2, yBase - scroll);
+    drawContext.restore();
 
-    // next line
-    let renderNextAlpha = renderActiveProgress;
-    if (renderActiveText.includes(settings.lyricsInstrumentalText)) {
-        const renderRemaining = renderCurrentEnd - renderTime;
-        const renderFadeDuration = Math.min(500, renderCurrentEnd - renderCurrentStart);
-        renderNextAlpha = renderRemaining < renderFadeDuration ? 1 - (renderRemaining / renderFadeDuration) : 0;
-    }
-    if (renderNextText) {
-        const isItalicNext = /^\(.*\)$/.test(renderNextText);
-        drawContext.font = `${isItalicNext ? "italic " : ""}82px "${settings.lyricsFont}", Inter, sans-serif`;
-        drawContext.fillStyle = '#fff';
-        drawContext.globalAlpha = renderNextAlpha;
-        drawContext.fillText(
-            renderNextText,
-            settings.lyricsPreviewWidth / 2,
-            renderNextY
-        );
+    // Next Line
+    if (textNext) {
+        drawContext.save();
+        const nAlpha = timeUntilNextLine <= 1000 ? (1 - (timeUntilNextLine / 1000)) * 0.5 : 0;
+        drawContext.font = `${/^\(.*\)$/.test(textNext) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
+        drawContext.fillStyle = '#ffffff';
+        drawContext.globalAlpha = Math.max(0, nAlpha);
+        drawContext.fillText(textNext, lyricsSettings.lyricsPreviewWidth / 2, (yBase + lineSpacing) - scroll);
+        drawContext.restore();
     }
 
-    // header text
-    if (elementTextareaHeader && elementTextareaHeader.value.trim()) {
-        const headerLines = elementTextareaHeader.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        lyricsRenderHeaderFooter(drawContext, headerLines, renderTime, {
-            font: `48px "${settings.lyricsFont}", Inter, sans-serif`,
-            x: settings.lyricsPreviewWidth / 2,
-            y: 120, // margin atas
-            baseline: 'top'
-        }, 'lyricsHeaderFirstRender');
-    }
-
-    // footer text (multi-line bergantian)
-    if (elementTextareaFooter && elementTextareaFooter.value.trim()) {
-        const footerLines = elementTextareaFooter.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        lyricsRenderHeaderFooter(drawContext, footerLines, renderTime, {
-            font: `32px "${settings.lyricsFont}", Inter, sans-serif`,
-            x: settings.lyricsPreviewWidth / 2,
-            y: settings.lyricsPreviewHeight - 120, // margin bawah
-            baseline: 'bottom'
-        }, 'lyricsHeaderFirstRender');
-    }
-
-    if (settings.lyricsRenderSpectrum) {
-        drawContext.globalAlpha = 1.0; // pastikan alpha 100%
-
+    // 7. Spectrum
+    if (lyricsSettings.lyricsStateRenderSpectrum) {
+        drawContext.save();
         lyricsRenderSpectrum(drawContext);
-    }
-
-    window.lyricsHeaderFirstRender = true;
-
-    drawContext.globalAlpha = 1.0;
-}
-
-export const lyricsGetAudio = (audio) => {
-    return new Promise((res, rej) => {
-        if (audio.readyState >= 2) {
-            return res()
-        };
-
-        function onloaded() {
-            cleanup(); res();
-        }
-
-        function onerr() {
-            cleanup();
-            rej(new Error('Cannot load audio'));
-        }
-
-        function cleanup() {
-            audio.removeEventListener('canplay', onloaded);
-            audio.removeEventListener('error', onerr);
-        }
-
-        audio.addEventListener('canplay', onloaded);
-        audio.addEventListener('error', onerr);
-    });
-};
-
-export const lyricsRenderHeaderFooter = (drawContext, lines, nowMs, opts, firstRenderFlagName) => {
-    if (!lines || !lines.length) return;
-
-    drawContext.font = opts.font;
-    drawContext.textAlign = 'center';
-    drawContext.textBaseline = opts.baseline;
-
-    // hanya 1 line → tampil statis putih
-    if (lines.length === 1) {
-        drawContext.fillStyle = '#fff';
-        drawContext.globalAlpha = 1;
-        drawContext.fillText(lines[0], opts.x, opts.y);
-        drawContext.globalAlpha = 1;
-        return;
-    }
-
-    const nowSec = nowMs / 1000;
-    const lineDuration = opts.lineDuration || 6; // detik per line
-    const totalLines = lines.length;
-
-    // index line aktif
-    const idx = Math.floor(nowSec / lineDuration) % totalLines;
-
-    // progress dari 0 → 1 untuk line ini
-    const progress = (nowSec % lineDuration) / lineDuration;
-
-    // fade in/out
-    const fadeZone = 0.2; // 20% awal/akhir
-    let alpha = 0.5; // default full
-
-    if (!window[firstRenderFlagName]) {
-        if (progress < fadeZone) {
-            alpha = progress / fadeZone; // fade in
-        } else if (progress > 1 - fadeZone) {
-            alpha = (1 - progress) / fadeZone; // fade out
-        }
-    }
-
-    // warna: genap = kuning, ganjil = putih
-    const color = (idx % 2 === 0) ? '#ffde59' : '#fff';
-
-    drawContext.fillStyle = color;
-    drawContext.globalAlpha = alpha;
-    drawContext.fillText(lines[idx], opts.x, opts.y);
-    drawContext.globalAlpha = 0.5; // reset ke normal
-
-    if (window[firstRenderFlagName]) {
-        window[firstRenderFlagName] = false;
+        drawContext.restore();
     }
 };
-
-export const lyricsRenderLoop = () => {
-    const elementAudio = document.querySelector(settings.elementAudio);
-
-    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-
-    settings.lyricsRequestAnimationFrameID = requestAnimationFrame(lyricsRenderLoop);
-}

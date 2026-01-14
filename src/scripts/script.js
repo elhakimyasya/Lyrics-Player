@@ -1,378 +1,279 @@
+import { lyricsSettings } from "./modules/lyricsSettings";
 import { lyricsParse } from "./modules/lyricsParse";
-import { lyricsGetAudio, lyricsRender, lyricsRenderLoop } from "./modules/lyricsRender";
-import { lyricsRenderAnalyzer } from "./modules/lyricsRenderSpectrum";
+import { lyricsRender } from "./modules/lyricsRender";
+import { lyricsRenderLoop } from "./modules/lyricsRenderLoop";
+import { lyricsRenderAnalyzer } from "./modules/lyricsRenderAnalyzer";
+import { lyricsStorageSave } from "./modules/lyricsStorageSave";
+import { lyricsStorageLoad } from "./modules/lyricsStorageLoad";
+import { lyricsNormalize } from "./modules/lyricsNormalize";
+import { lyricsGetAudioState } from "./modules/lyricsGetAudioState";
+import { lyricsStorageFileLoad, lyricsStorageFileSave } from "./modules/lyricsStorageManager";
 
-export const settings = {
-    elementInputAudio: '.element_input_audio',
-    elementInputOffset: '.element_input_offset',
-    elementInputBackground: '.element_input_background',
-    elementInputSpectrum: '.element_input_spectrum',
-    elementTextareaLyrics: '.element_textarea_lyrics',
-    elementTextareaHeader: '.element_textarea_header',
-    elementTextareaFooter: '.element_textarea_footer',
-    elementButtonExport: '.element_button_export',
-    elementButtonFullscreen: '.element_button_fullscreen',
-    elementAudio: '.element_audio',
-    elementContainerControll: '.element_container_controll',
-    elementCanvas: '.element_canvas_preview',
+// --- DOM CACHING ---
+const domInputOffset = document.querySelector(lyricsSettings.elementSelectorInputOffset);
+const domInputSpectrum = document.querySelector(lyricsSettings.elementSelectorInputSpectrum);
+const domInputBackground = document.querySelector(lyricsSettings.elementSelectorInputBackground);
+const domInputAudio = document.querySelector(lyricsSettings.elementSelectorInputAudio);
+const domTextareaLyrics = document.querySelector(lyricsSettings.elementSelectorTextareaLyrics);
+const domTextareaHeader = document.querySelector(lyricsSettings.elementSelectorTextareaHeader);
+const domTextareaFooter = document.querySelector(lyricsSettings.elementSelectorTextareaFooter);
+const domButtonExport = document.querySelector(lyricsSettings.elementSelectorButtonExport);
+const domButtonFullscreen = document.querySelector(lyricsSettings.elementSelectorButtonFullscreen);
+const domAudioPlayer = document.querySelector(lyricsSettings.elementSelectorAudio);
+const domContainerControl = document.querySelector(lyricsSettings.elementSelectorContainerControl);
+const domCanvasPreview = document.querySelector(lyricsSettings.elementSelectorCanvas);
 
-    lyricsParsed: [],
-    lyricsIsPlaying: false,
-    lyricsIsRecording: false,
-    lyricsRenderSpectrum: true,
-    lyricsBackground: null,
-    lyricsRequestAnimationFrameID: null,
-    lyricsSpectrumAudioContext: null,
-    lyricsSpectrumAnalyser: null,
-    lyricsSpectrumSource: null,
-    lyricsSpectrumFrequencyData: null,
-    lyricsContext: null,
-    lyricsPreviewWidth: 1920,
-    lyricsPreviewHeight: 1080,
-    lyricsFPS: 60,
-    lyricsFont: 'Nexa Black',
-    lyricsInstrumentalText: '♪',
-    lyricsFileName: 'lyrics-export',
+// Tambahan DOM untuk Warna
+const domInputBgColor = document.querySelector(lyricsSettings.elementSelectorBgColor);
+const domInputKeyColor = document.querySelector(lyricsSettings.elementSelectorKeyColor);
+
+lyricsSettings.lyricsCanvasContext = domCanvasPreview.getContext('2d', { alpha: true });
+
+// --- INITIALIZATION ---
+const lyricsInitializeApplication = async () => {
+    // 1. Pulihkan Teks & Warna dari LocalStorage
+    domTextareaLyrics.value = lyricsNormalize(lyricsStorageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] Lirik Baris Pertama'));
+    domTextareaHeader.value = lyricsStorageLoad('lyrics_header', '');
+    domTextareaFooter.value = lyricsStorageLoad('lyrics_footer', '');
+    domInputOffset.value = lyricsStorageLoad('lyrics_offset', '0');
+    
+    // Pulihkan Warna
+    domInputBgColor.value = lyricsSettings.lyricsBgColor;
+    domInputKeyColor.value = lyricsSettings.lyricsKeyColor;
+
+    lyricsSettings.lyricsDataParsed = lyricsParse(domTextareaLyrics.value);
+
+    // 2. Pulihkan Audio & Background dari IndexedDB (Tetap seperti kode Anda)
+    const savedAudioBlob = await lyricsStorageFileLoad(lyricsSettings.lyricsPersistenceKeys.audio);
+    if (savedAudioBlob) {
+        domAudioPlayer.src = URL.createObjectURL(savedAudioBlob);
+        domAudioPlayer.load();
+        lyricsRenderAnalyzer(domAudioPlayer);
+    }
+
+    const savedBackgroundBlob = await lyricsStorageFileLoad(lyricsSettings.lyricsPersistenceKeys.background);
+    const savedBackgroundType = lyricsStorageLoad(lyricsSettings.lyricsPersistenceKeys.bgType, '');
+
+    if (savedBackgroundBlob && savedBackgroundType) {
+        const backgroundUrl = URL.createObjectURL(savedBackgroundBlob);
+        if (savedBackgroundType === 'image') {
+            const imageElement = new Image();
+            imageElement.src = backgroundUrl;
+            imageElement.onload = () => {
+                lyricsSettings.lyricsResourceBackground = { type: 'image', element: imageElement };
+                lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+            };
+        } else {
+            const videoElement = document.createElement('video');
+            videoElement.src = backgroundUrl;
+            videoElement.muted = true;
+            videoElement.loop = true;
+            videoElement.playsInline = true;
+            videoElement.onloadeddata = () => {
+                videoElement.play().catch(() => { });
+                lyricsSettings.lyricsResourceBackground = { type: 'video', element: videoElement };
+                lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+            };
+        }
+    }
+
+    requestAnimationFrame(() => {
+        lyricsRender(0, lyricsSettings.lyricsCanvasContext);
+    });
 };
 
-const elementInputOffset = document.querySelector(settings.elementInputOffset);
-const elementInputSpectrum = document.querySelector(settings.elementInputSpectrum);
-const elementInputBackground = document.querySelector(settings.elementInputBackground);
-const elementInputAudio = document.querySelector(settings.elementInputAudio);
-const elementTextareaLyrics = document.querySelector(settings.elementTextareaLyrics);
-const elementTextareaHeader = document.querySelector(settings.elementTextareaHeader);
-const elementTextareaFooter = document.querySelector(settings.elementTextareaFooter);
-const elementButtonExport = document.querySelector(settings.elementButtonExport);
-const elementButtonFullscreen = document.querySelector(settings.elementButtonFullscreen);
-const elementAudio = document.querySelector(settings.elementAudio);
-const elementContainerControll = document.querySelector(settings.elementContainerControll);
-const elementCanvas = document.querySelector(settings.elementCanvas);
+const lyricsEnsureAudioContextActive = async () => {
+    if (lyricsSettings.lyricsAudioContext && lyricsSettings.lyricsAudioContext.state === 'suspended') {
+        try {
+            await lyricsSettings.lyricsAudioContext.resume();
+        } catch (error) {
+            console.error("Failed to resume AudioContext:", error);
+        }
+    }
+};
 
-settings.lyricsContext = elementCanvas.getContext('2d', {
-    alpha: true
+// --- EVENT LISTENERS (COLOR AUTO-CHANGE) ---
+
+domInputBgColor.addEventListener('input', (e) => {
+    const color = e.target.value;
+    lyricsSettings.lyricsBgColor = color;
+    lyricsStorageSave('lyrics_bg_color', color);
+    if (!lyricsSettings.lyricsStateIsPlaying) {
+        lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+    }
 });
 
-// persistence helpers
-const storageSave = (key, value) => {
-    localStorage.setItem(key, value);
-};
-
-const storageLoad = (key, fallback = '') => {
-    return localStorage.getItem(key) ?? fallback;
-};
-
-const normalizeLyrics = (text) => {
-    if (!text) {
-        return ''
-    };
-
-    text = text.normalize('NFC'); // Normalisasi unicode
-    text = text.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, ''); // Hapus control characters KECUALI \n (000A) dan \r (000D)
-    text = text.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Hapus zero-width characters
-    text = text.replace(/[\u2060-\u206F]/g, ''); // Hapus formatting invis chars
-
-    // Konversi confusable characters
-    const confusables = {
-        "е": "e", "Е": "E",
-        "о": "o", "О": "O",
-        "ӏ": "l",
-        "І": "I",
-        "ı": "i",
-        "ѕ": "s",
-        "ᴀ": "A", "ʙ": "B", "ᴄ": "C", "ᴇ": "E",
-        "ɢ": "G", "ʜ": "H", "ɪ": "I", "ᴊ": "J",
-        "ᴋ": "K", "ʟ": "L", "ᴍ": "M", "ɴ": "N",
-        "ᴏ": "O", "ᴘ": "P", "ʀ": "R", "ᴛ": "T",
-        "ᴜ": "U", "ᴡ": "W", "ʏ": "Y", "ᴢ": "Z",
-        "∕": "/", "꞉": ":"
-    };
-
-    text = text.replace(/./g, char => confusables[char] || char);
-    text = text.split(/\r?\n/).map(line => line.replace(/ +/g, ' ').trim()).join('\n'); // Bersihkan spasi dalam 1 baris, tanpa ganggu newline
-
-    return text;
-};
-
-// restore persisted values
-elementTextareaLyrics.value = normalizeLyrics(storageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] First lyric line\n[00:10.00] Second lyric line\n[00:15.00] Third lyric line'));
-settings.lyricsParsed = lyricsParse(elementTextareaLyrics.value);
-
-elementTextareaHeader.value = storageLoad('lyrics_header', '');
-elementTextareaFooter.value = storageLoad('lyrics_footer', '');
-
-// render awal
-lyricsRender(0, settings.lyricsContext);
-
-elementInputAudio.addEventListener('change', (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) {
-        return
-    };
-
-    elementAudio.src = URL.createObjectURL(file);
-    elementAudio.load();
-    lyricsRenderAnalyzer(elementAudio);
-    settings.lyricsFileName = `${file.name.replace(/\.[^/.]+$/, '')}`;
+domInputKeyColor.addEventListener('input', (e) => {
+    const color = e.target.value;
+    lyricsSettings.lyricsKeyColor = color;
+    lyricsStorageSave('lyrics_key_color', color);
+    if (!lyricsSettings.lyricsStateIsPlaying) {
+        lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+    }
 });
 
-elementButtonFullscreen.addEventListener('click', (event) => {
-    if (!document.fullscreenElement) {
-        elementCanvas.requestFullscreen().catch(console.error)
+// --- EVENT LISTENERS (LYRICS & OTHERS) ---
+
+domInputAudio.addEventListener('change', async (event) => {
+    const audioFile = event.target.files?.[0];
+    if (!audioFile) return;
+    await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.audio, audioFile);
+    domAudioPlayer.src = URL.createObjectURL(audioFile);
+    domAudioPlayer.load();
+    lyricsRenderAnalyzer(domAudioPlayer);
+    lyricsSettings.lyricsExportFileName = audioFile.name.replace(/\.[^/.]+$/, '');
+});
+
+domInputBackground.addEventListener('change', async (event) => {
+    const backgroundFile = event.target.files?.[0];
+    if (!backgroundFile) return;
+    if (lyricsSettings.lyricsResourceBackground?.element?.src) {
+        URL.revokeObjectURL(lyricsSettings.lyricsResourceBackground.element.src);
+    }
+    const backgroundType = backgroundFile.type.startsWith('image/') ? 'image' : 'video';
+    await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.background, backgroundFile);
+    lyricsStorageSave(lyricsSettings.lyricsPersistenceKeys.bgType, backgroundType);
+    const backgroundUrl = URL.createObjectURL(backgroundFile);
+    if (backgroundType === 'image') {
+        const imageElement = new Image();
+        imageElement.onload = () => {
+            lyricsSettings.lyricsResourceBackground = { type: 'image', element: imageElement };
+            lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+        };
+        imageElement.src = backgroundUrl;
     } else {
-        document.exitFullscreen();
-    }
-});
-
-elementAudio.addEventListener('loadedmetadata', () => {
-    elementContainerControll.classList.add('grid');
-    elementContainerControll.classList.remove('hidden');
-});
-
-elementTextareaLyrics.addEventListener('input', () => {
-    const normalized = normalizeLyrics(elementTextareaLyrics.value);
-
-    elementTextareaLyrics.value = normalized;
-    settings.lyricsParsed = lyricsParse(normalized);
-    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-
-    storageSave('lyrics_textarea', normalized);
-});
-
-elementTextareaHeader.addEventListener('input', () => {
-    if (!settings.lyricsIsPlaying) {
-        lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-    }
-    storageSave('lyrics_header', elementTextareaHeader.value);
-});
-
-elementTextareaFooter.addEventListener('input', () => {
-    if (!settings.lyricsIsPlaying) {
-        lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-    }
-    storageSave('lyrics_footer', elementTextareaFooter.value);
-});
-
-elementInputOffset.addEventListener('input', () => {
-    if (!settings.lyricsIsPlaying) {
-        lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-    }
-});
-
-elementInputBackground.addEventListener('change', (event) => {
-    const file = event.target.files && event.target.files[0];
-    settings.lyricsBackground = null;
-
-    if (!file) {
-        return
-    };
-
-    const url = URL.createObjectURL(file);
-    if (file.type.startsWith('image/')) {
-        const fileImage = new Image();
-        fileImage.src = url;
-        fileImage.onload = () => {
-            settings.lyricsBackground = {
-                type: 'image',
-                el: fileImage
-            };
-
-            lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
+        const videoElement = document.createElement('video');
+        videoElement.muted = videoElement.loop = videoElement.playsInline = true;
+        videoElement.onloadeddata = () => {
+            lyricsSettings.lyricsResourceBackground = { type: 'video', element: videoElement };
+            lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
         };
-    } else if (file.type.startsWith('video/')) {
-        const fileVideo = document.createElement('video');
-        fileVideo.src = url;
-        fileVideo.muted = true;
-        fileVideo.loop = true;
-        fileVideo.playsInline = true;
-        fileVideo.onloadeddata = () => {
-            fileVideo.play().catch((error) => {
-                console.log('Error playing video:', error);
-            });
-
-            settings.lyricsBackground = {
-                type: 'video',
-                el: fileVideo
-            };
-
-            lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
-        };
-
-        fileVideo.load();
+        videoElement.src = backgroundUrl;
+        videoElement.load();
     }
 });
 
-elementButtonExport.addEventListener('click', async () => {
-    if (!elementAudio.src) {
-        alert('Please load an audio file first.');
+domTextareaLyrics.addEventListener('input', () => {
+    const content = lyricsNormalize(domTextareaLyrics.value);
+    domTextareaLyrics.value = content;
+    lyricsSettings.lyricsDataParsed = lyricsParse(content);
+    lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+    lyricsStorageSave('lyrics_textarea', content);
+});
 
-        return;
+const handleTextareaInputPersistence = (storageKey, htmlElement) => {
+    if (!lyricsSettings.lyricsStateIsPlaying) {
+        lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
     }
+    lyricsStorageSave(storageKey, htmlElement.value);
+};
 
-    const duration = elementAudio.duration;
-    if (!isFinite(duration) || duration <= 0) {
-        alert('Audio duration unknown — play once then try export.');
+domTextareaHeader.addEventListener('input', () => handleTextareaInputPersistence('lyrics_header', domTextareaHeader));
+domTextareaFooter.addEventListener('input', () => handleTextareaInputPersistence('lyrics_footer', domTextareaFooter));
 
-        return;
+domInputOffset.addEventListener('input', () => {
+    lyricsStorageSave('lyrics_offset', domInputOffset.value);
+    if (!lyricsSettings.lyricsStateIsPlaying) {
+        lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
     }
+});
 
-    elementButtonExport.disabled = true;
-    elementButtonExport.textContent = 'Recording…';
-    settings.lyricsIsRecording = true;
+domButtonFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) domCanvasPreview.requestFullscreen().catch(console.error);
+    else document.exitFullscreen();
+});
+
+domAudioPlayer.addEventListener('loadedmetadata', () => {
+    domContainerControl.classList.replace('hidden', 'grid');
+});
+
+domButtonExport.addEventListener('click', async () => {
+    if (!domAudioPlayer.src) return alert('Silakan masukkan file audio terlebih dahulu.');
+    domButtonExport.disabled = true;
+    domButtonExport.textContent = 'Recording...';
+    lyricsSettings.lyricsStateIsRecording = true;
 
     try {
-        // ensure font is ready before export
-        await lyricsGetAudio(elementAudio);
+        await lyricsGetAudioState(domAudioPlayer);
+        await lyricsEnsureAudioContextActive();
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = lyricsSettings.lyricsPreviewWidth;
+        exportCanvas.height = lyricsSettings.lyricsPreviewHeight;
+        const exportContext = exportCanvas.getContext('2d', { alpha: true });
+        const videoStream = exportCanvas.captureStream(lyricsSettings.lyricsFramesPerSecond);
+        let combinedStream = new MediaStream();
+        videoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
 
-        // prepare offscreen canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = settings.lyricsPreviewWidth;
-        canvas.height = settings.lyricsPreviewHeight;
-
-        const cctx = canvas.getContext('2d', {
-            alpha: true,
-            desynchronized: true // minta pipeline low-latency (GPU-friendly)
-        });
-
-        // capture streams and audio
-        const canvasStream = canvas.captureStream(settings.lyricsFPS);
-        let audioStream = null;
-        if (typeof elementAudio.captureStream === 'function') {
-            try {
-                audioStream = elementAudio.captureStream();
-            } catch (error) {
-                console.log('Error capturing audio stream:', error);
-                audioStream = null;
-            }
-        }
-
-        const composed = new MediaStream();
-        canvasStream.getVideoTracks().forEach(t => composed.addTrack(t));
-        if (audioStream && audioStream.getAudioTracks().length) {
-            audioStream.getAudioTracks().forEach(t => composed.addTrack(t));
+        if (domAudioPlayer.captureStream) {
+            const audioStream = domAudioPlayer.captureStream();
+            audioStream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
         } else {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const src = audioCtx.createMediaElementSource(elementAudio);
-            const dest = audioCtx.createMediaStreamDestination();
-            src.connect(dest);
-            src.connect(audioCtx.destination);
-            dest.stream.getAudioTracks().forEach(t => composed.addTrack(t));
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(domAudioPlayer);
+            const destination = audioContext.createMediaStreamDestination();
+            source.connect(destination);
+            source.connect(audioContext.destination);
+            destination.stream.getAudioTracks().forEach(track => combinedStream.addTrack(track));
         }
 
-        // recorder with fallbacks
-        const mimeChoices = [
-            'video/webm;codecs=vp9,opus',
-            'video/webm;codecs=vp8,opus',
-            'video/webm'
-        ];
+        const recorderOptions = { mimeType: 'video/webm;codecs=vp9,opus' };
+        const mediaRecorder = new MediaRecorder(combinedStream, MediaRecorder.isTypeSupported(recorderOptions.mimeType) ? recorderOptions : {});
+        const recordingChunks = [];
+        mediaRecorder.ondataavailable = (event) => event.data.size && recordingChunks.push(event.data);
+        mediaRecorder.onstop = () => {
+            const finalBlob = new Blob(recordingChunks, { type: 'video/webm' });
+            const downloadUrl = URL.createObjectURL(finalBlob);
+            const hiddenLink = document.createElement('a');
+            hiddenLink.href = downloadUrl;
+            hiddenLink.download = `${lyricsSettings.lyricsExportFileName}.webm`;
+            hiddenLink.click();
+            domButtonExport.disabled = false;
+            domButtonExport.textContent = 'Export';
+            lyricsSettings.lyricsStateIsRecording = false;
+        };
+        mediaRecorder.start();
+        domAudioPlayer.currentTime = 0;
+        await domAudioPlayer.play();
 
-        let recorder;
-        for (const m of mimeChoices) {
-            try {
-                recorder = new MediaRecorder(composed, { mimeType: m }); break;
-            } catch (error) {
-                console.log(`MediaRecorder with mimeType "${m}" failed:`, error);
-                recorder = null;
+        const renderExportFrame = () => {
+            if (!lyricsSettings.lyricsStateIsRecording) return;
+            lyricsRender(domAudioPlayer.currentTime * 1000, exportContext);
+            if (domAudioPlayer.ended || domAudioPlayer.currentTime >= domAudioPlayer.duration - 0.05) {
+                mediaRecorder.stop();
+                domAudioPlayer.pause();
+            } else {
+                setTimeout(renderExportFrame, 1000 / lyricsSettings.lyricsFramesPerSecond);
             }
-        }
-
-        if (!recorder) {
-            recorder = new MediaRecorder(composed)
         };
-
-        const chunks = [];
-        recorder.ondataavailable = (ev) => {
-            if (ev.data && ev.data.size) {
-                chunks.push(ev.data)
-            };
-        };
-
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, {
-                type: 'video/webm'
-            });
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${settings.lyricsFileName}.webm`; // pake nama file audio
-            a.click();
-            URL.revokeObjectURL(url);
-
-            elementButtonExport.disabled = false;
-            elementButtonExport.textContent = 'Export';
-            settings.lyricsIsRecording = false;
-        };
-
-        // start recording & play audio from 0
-        recorder.start();
-        elementAudio.currentTime = 0;
-        await elementAudio.play();
-
-        // render loop (use same lyricsRender, but with cctx)
-        const frameInterval = Math.round(1000 / settings.lyricsFPS);
-        const renderInterval = setInterval(() => {
-            lyricsRender(elementAudio.currentTime * 1000, cctx);
-
-            if (elementAudio.ended || elementAudio.currentTime >= elementAudio.duration - 0.05) {
-                try {
-                    recorder.stop();
-                } catch (error) {
-                    console.log('Error stopping recorder:', error);
-                }
-
-                clearInterval(renderInterval);
-                elementAudio.pause();
-            }
-        }, frameInterval);
-
+        renderExportFrame();
     } catch (error) {
-        console.log(error);
-        alert('Export failed: ' + (error && error.message ? error.message : error));
-        elementButtonExport.disabled = false;
-        elementButtonExport.textContent = 'Record';
-
-        settings.lyricsIsRecording = false;
+        console.error('Export Error:', error);
+        domButtonExport.disabled = false;
+        domButtonExport.textContent = 'Export';
+        lyricsSettings.lyricsStateIsRecording = false;
     }
 });
 
-elementInputSpectrum.addEventListener('change', (event) => {
-    settings.lyricsRenderSpectrum = event.target.checked;
+domInputSpectrum.addEventListener('change', (e) => {
+    lyricsSettings.lyricsStateRenderSpectrum = e.target.checked;
+    if (!lyricsSettings.lyricsStateIsPlaying) lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+});
 
-    if (!settings.lyricsIsPlaying) {
-        lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext);
+domAudioPlayer.addEventListener('play', async () => {
+    await lyricsEnsureAudioContextActive();
+    if (lyricsSettings.lyricsAnimationRequestID) cancelAnimationFrame(lyricsSettings.lyricsAnimationRequestID);
+    lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsRenderLoop);
+    lyricsSettings.lyricsStateIsPlaying = true;
+});
+
+domAudioPlayer.addEventListener('pause', () => {
+    if (lyricsSettings.lyricsAnimationRequestID) {
+        cancelAnimationFrame(lyricsSettings.lyricsAnimationRequestID);
+        lyricsSettings.lyricsAnimationRequestID = null;
+        lyricsSettings.lyricsStateIsPlaying = false;
     }
 });
 
-elementAudio.addEventListener('play', (event) => {
-    event.preventDefault();
+domAudioPlayer.addEventListener('seeked', () => lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext));
 
-    if (settings.lyricsRequestAnimationFrameID) {
-        cancelAnimationFrame(settings.lyricsRequestAnimationFrameID)
-    };
-
-    settings.lyricsRequestAnimationFrameID = requestAnimationFrame(lyricsRenderLoop);
-    settings.lyricsIsPlaying = true;
-});
-
-elementAudio.addEventListener('pause', (event) => {
-    event.preventDefault();
-
-    if (settings.lyricsRequestAnimationFrameID) {
-        cancelAnimationFrame(settings.lyricsRequestAnimationFrameID);
-
-        settings.lyricsRequestAnimationFrameID = null;
-        settings.lyricsIsPlaying = false
-    };
-});
-
-elementAudio.addEventListener('seeked', () => {
-    lyricsRender(elementAudio.currentTime * 1000, settings.lyricsContext)
-});
-
-window.addEventListener('beforeunload', (event) => {
-    if (settings.lyricsIsRecording) {
-        event.preventDefault();
-        event.returnValue = '';
-        return '';
-    }
-});
+lyricsInitializeApplication();

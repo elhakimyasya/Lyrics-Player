@@ -1,75 +1,57 @@
-import { settings } from "../script";
+import { lyricsSettings } from "./lyricsSettings";
+
+/**
+ * Mengonversi HEX ke RGBA string
+ */
+const hexToRgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 export const lyricsRenderSpectrum = (drawContext) => {
-    if (!settings.lyricsSpectrumAnalyser || !settings.lyricsSpectrumFrequencyData) return;
-    
-    settings.lyricsSpectrumAnalyser.getByteFrequencyData(settings.lyricsSpectrumFrequencyData);
+    if (!lyricsSettings.lyricsAudioAnalyser || !lyricsSettings.lyricsAudioFrequencyData) return;
 
-    const barsNumber = 80;
-    const binSize = Math.floor(settings.lyricsSpectrumFrequencyData.length / barsNumber);
+    // Ambil Key Color terbaru dari settings
+    const keyColor = lyricsSettings.lyricsKeyColor || '#3b82f6';
 
-    const barGap = 3;
-    const barWidth = (settings.lyricsPreviewWidth / 2) / barsNumber;
+    lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(lyricsSettings.lyricsAudioFrequencyData);
 
-    const spectrumHeight = settings.lyricsPreviewHeight * 0.12;
-    const baseY = settings.lyricsPreviewHeight;
-    const barThresold = 5;
+    const spectrumBarsCount = 80;
+    const spectrumBinSize = Math.floor(lyricsSettings.lyricsAudioFrequencyData.length / spectrumBarsCount);
+    const spectrumBarGap = 3;
+    const spectrumBarWidth = (lyricsSettings.lyricsPreviewWidth / 2) / spectrumBarsCount;
+    const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * 0.12;
+    const spectrumBaseY = lyricsSettings.lyricsPreviewHeight;
+    const spectrumThreshold = 5;
 
-    // bikin gradient 1x aja, bukan per-bar
-    const gradient = drawContext.createLinearGradient(0, baseY, 0, baseY - spectrumHeight);
-    gradient.addColorStop(0, "rgba(255,222,89,0.1)");
-    gradient.addColorStop(1, "rgba(255,222,89,0.9)");
-    drawContext.fillStyle = gradient;
+    // Buat Gradien berdasarkan Key Color yang dipilih user
+    const spectrumGradient = drawContext.createLinearGradient(0, spectrumBaseY, 0, spectrumBaseY - spectrumMaxHeight);
+    spectrumGradient.addColorStop(0, hexToRgba(keyColor, 0.1));
+    spectrumGradient.addColorStop(1, hexToRgba(keyColor, 0.9));
 
-    for (let i = 0; i < barsNumber; i++) {
-        // pakai max biar gak berat
-        let max = 0;
-        for (let j = 0; j < binSize; j++) {
-            const v = settings.lyricsSpectrumFrequencyData[i * binSize + j];
-            if (v > max) max = v;
+    drawContext.fillStyle = spectrumGradient;
+
+    for (let index = 0; index < spectrumBarsCount; index++) {
+        let frequencyMaxValue = 0;
+        for (let binIndex = 0; binIndex < spectrumBinSize; binIndex++) {
+            const frequencyValue = lyricsSettings.lyricsAudioFrequencyData[index * spectrumBinSize + binIndex];
+            if (frequencyValue > frequencyMaxValue) frequencyMaxValue = frequencyValue;
         }
-        let avg = max;
 
-        if (avg < barThresold) avg = 0;
+        if (frequencyMaxValue < spectrumThreshold) frequencyMaxValue = 0;
 
-        const scale = 1 - (i / (barsNumber - 1)) * 0.98;
-        const barHeight = (avg / 255) * spectrumHeight * scale;
+        const spectrumScale = 1 - (index / (spectrumBarsCount - 1)) * 0.98;
+        const spectrumBarHeight = (frequencyMaxValue / 255) * spectrumMaxHeight * spectrumScale;
+        const drawY = spectrumBaseY - spectrumBarHeight;
 
-        const xLeft = i * barWidth;
-        const y = baseY - barHeight;
+        // Draw Left Side
+        const drawXLeft = index * spectrumBarWidth;
+        drawContext.fillRect(drawXLeft, drawY, spectrumBarWidth - spectrumBarGap, spectrumBarHeight);
 
-        drawContext.fillRect(xLeft, y, barWidth - barGap, barHeight);
-
-        const xRight = settings.lyricsPreviewWidth / 2 + (barsNumber - i - 1) * barWidth;
-        drawContext.fillRect(xRight, y, barWidth - barGap, barHeight);
+        // Draw Right Side (Mirrored)
+        const drawXRight = (lyricsSettings.lyricsPreviewWidth / 2) + (spectrumBarsCount - index - 1) * spectrumBarWidth;
+        drawContext.fillRect(drawXRight, drawY, spectrumBarWidth - spectrumBarGap, spectrumBarHeight);
     }
-}
-
-export const lyricsRenderAnalyzer = (audioEl) => {
-    if (!settings.lyricsSpectrumAudioContext) {
-        settings.lyricsSpectrumAudioContext = new AudioContext();
-        settings.lyricsSpectrumAnalyser = settings.lyricsSpectrumAudioContext.createAnalyser();
-        settings.lyricsSpectrumAnalyser.fftSize = 1024; // lebih detail
-        settings.lyricsSpectrumAnalyser.smoothingTimeConstant = 0.1; // lebih responsif
-        settings.lyricsSpectrumSource = settings.lyricsSpectrumAudioContext.createMediaElementSource(audioEl);
-
-        // Tambahkan bass filte
-        const bassFilter = settings.lyricsSpectrumAudioContext.createBiquadFilter();
-        bassFilter.type = 'lowshelf';
-        bassFilter.frequency.value = 150; // bass di bawah 150Hz
-        bassFilter.gain.value = 6; // boost 6dB
-
-
-        // tambahin gain biar lebih sensitif
-        const gainNode = settings.lyricsSpectrumAudioContext.createGain();
-        gainNode.gain.value = 1.0; // 2x lebih keras
-
-        // koneksi: source → bass → analyzer → gain → destination
-        settings.lyricsSpectrumSource.connect(bassFilter);
-        bassFilter.connect(settings.lyricsSpectrumAnalyser);
-        settings.lyricsSpectrumAnalyser.connect(gainNode);
-        gainNode.connect(settings.lyricsSpectrumAudioContext.destination);
-
-        settings.lyricsSpectrumFrequencyData = new Uint8Array(settings.lyricsSpectrumAnalyser.frequencyBinCount);
-    }
-}
+};

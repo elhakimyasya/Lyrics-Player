@@ -90,7 +90,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
         }
     }
 
-    const speed = 0.08; 
+    const speed = 0.01; 
     if (lyricsSettings.lyricsBackgroundCurrentOpacity > targetOpacity) {
         lyricsSettings.lyricsBackgroundCurrentOpacity = Math.max(targetOpacity, lyricsSettings.lyricsBackgroundCurrentOpacity - speed);
     } else if (lyricsSettings.lyricsBackgroundCurrentOpacity < targetOpacity) {

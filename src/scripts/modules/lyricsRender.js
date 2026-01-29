@@ -32,13 +32,12 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     const timeOffsetMs = (parseFloat(domInputOffset?.value) || 0) * 1000;
     const adjustedRenderTime = currentTimeMs + timeOffsetMs;
 
-    // --- FIX VIDEO PLAYBACK ---
     if (lyricsSettings.lyricsResourceBackground?.type === 'video') {
         const vid = lyricsSettings.lyricsResourceBackground.element;
         if (vid.paused && !vid.ended) {
             vid.muted = true;
             vid.playsInline = true;
-            vid.play().catch(() => {});
+            vid.play().catch(() => { });
         }
     }
 
@@ -46,7 +45,6 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     const keyColor = lyricsSettings.lyricsKeyColor;
     drawContext.clearRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
 
-    // 1. Identifikasi Baris Aktif
     let activeLineIndex = -1;
     const totalLines = lyricsSettings.lyricsDataParsed.length;
     if (totalLines > 0) {
@@ -57,40 +55,32 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     }
     if (activeLineIndex < 0 && totalLines > 0) activeLineIndex = 0;
 
-    // 2. Setup Data
     const currentLineStart = totalLines > 0 ? lyricsSettings.lyricsDataParsed[activeLineIndex].timeMs : 0;
-    const currentLineEnd = (activeLineIndex + 1 < totalLines)
-        ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs
-        : (domAudioPlayer.duration * 1000);
-
+    const currentLineEnd = (activeLineIndex + 1 < totalLines) ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs : (domAudioPlayer.duration * 1000);
     const timeUntilNextLine = currentLineEnd - adjustedRenderTime;
     const textActiveRaw = activeLineIndex >= 0 ? (lyricsSettings.lyricsDataParsed[activeLineIndex]?.text || '') : '';
     const textNextRaw = (activeLineIndex + 1 < totalLines) ? (lyricsSettings.lyricsDataParsed[activeLineIndex + 1].text || '') : '';
     const textPreviousRaw = (activeLineIndex > 0) ? lyricsSettings.lyricsDataParsed[activeLineIndex - 1].text : '';
 
-    // Logika Deteksi Simbol (Patokan)
     const isCurrentInstrumental = textActiveRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
     const isNextInstrumental = textNextRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
     const isPreviousInstrumental = textPreviousRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
     const isEnding = (activeLineIndex >= totalLines - 2 && textActiveRaw.trim() === '' && textNextRaw.trim() === '');
 
-    // Bersihkan teks dari simbol agar tidak muncul di layar
     const textActive = isCurrentInstrumental ? "" : textActiveRaw;
     const textNext = isNextInstrumental ? "" : textNextRaw;
     const textPrevious = isPreviousInstrumental ? "" : textPreviousRaw;
 
-    // 3. Logika Antisipasi Fade Background
     let targetOpacity = 0.9; // Default Gelap
 
     if (isEnding || isCurrentInstrumental) {
         targetOpacity = 0.0; // Terang
-        // Mulai menggelap 1.5 detik SEBELUM lirik asli muncul
         if (!isNextInstrumental && textNextRaw.trim() !== '' && timeUntilNextLine < 1500) {
             targetOpacity = 0.9;
         }
     }
 
-    const speed = 0.01; 
+    const speed = 0.01;
     if (lyricsSettings.lyricsBackgroundCurrentOpacity > targetOpacity) {
         lyricsSettings.lyricsBackgroundCurrentOpacity = Math.max(targetOpacity, lyricsSettings.lyricsBackgroundCurrentOpacity - speed);
     } else if (lyricsSettings.lyricsBackgroundCurrentOpacity < targetOpacity) {
@@ -107,7 +97,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
         drawResourceCover(drawContext, lyricsSettings.lyricsResourceBackground, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
         drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, ${lyricsSettings.lyricsBackgroundCurrentOpacity})`;
         drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
-        
+
         if (lyricsSettings.lyricsBackgroundCurrentOpacity < 0.3) {
             drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, 0.1)`;
             drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
@@ -131,6 +121,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
             font: `48px "${lyricsSettings.lyricsFontFace}", sans-serif`,
             x: lyricsSettings.lyricsPreviewWidth / 2, y: 120, baseline: 'top'
         });
+        
         drawContext.restore();
     }
 
@@ -159,7 +150,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     // Previous Line (Hanya muncul jika bukan simbol)
     if (textPrevious) {
         drawContext.save();
-        const pAlpha = (isCurrentInstrumental || isEnding) 
+        const pAlpha = (isCurrentInstrumental || isEnding)
             ? Math.max(0, (1 - ((adjustedRenderTime - currentLineStart) / 200)) * 0.5)
             : (1 - animProgress) * 0.5;
         drawContext.font = `${/^\(.*\)$/.test(textPrevious) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;

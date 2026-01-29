@@ -23,20 +23,18 @@ const domAudioPlayer = document.querySelector(lyricsSettings.elementSelectorAudi
 const domContainerControl = document.querySelector(lyricsSettings.elementSelectorContainerControl);
 const domCanvasPreview = document.querySelector(lyricsSettings.elementSelectorCanvas);
 
-// Tambahan DOM untuk Warna
 const domInputBgColor = document.querySelector(lyricsSettings.elementSelectorBgColor);
 const domInputKeyColor = document.querySelector(lyricsSettings.elementSelectorKeyColor);
 
 lyricsSettings.lyricsCanvasContext = domCanvasPreview.getContext('2d', { alpha: true });
 
-// --- INITIALIZATION ---
 const lyricsInitializeApplication = async () => {
     // 1. Pulihkan Teks & Warna dari LocalStorage
     domTextareaLyrics.value = lyricsNormalize(lyricsStorageLoad('lyrics_textarea', '[00:00.00] Intro\n[00:05.00] Lirik Baris Pertama'));
     domTextareaHeader.value = lyricsStorageLoad('lyrics_header', '');
     domTextareaFooter.value = lyricsStorageLoad('lyrics_footer', '');
     domInputOffset.value = lyricsStorageLoad('lyrics_offset', '0');
-    
+
     // Pulihkan Warna
     domInputBgColor.value = lyricsSettings.lyricsBgColor;
     domInputKeyColor.value = lyricsSettings.lyricsKeyColor;
@@ -92,8 +90,6 @@ const lyricsEnsureAudioContextActive = async () => {
     }
 };
 
-// --- EVENT LISTENERS (COLOR AUTO-CHANGE) ---
-
 domInputBgColor.addEventListener('input', (e) => {
     const color = e.target.value;
     lyricsSettings.lyricsBgColor = color;
@@ -112,8 +108,6 @@ domInputKeyColor.addEventListener('input', (e) => {
     }
 });
 
-// --- EVENT LISTENERS (LYRICS & OTHERS) ---
-
 domInputAudio.addEventListener('change', async (event) => {
     const audioFile = event.target.files?.[0];
     if (!audioFile) return;
@@ -126,13 +120,18 @@ domInputAudio.addEventListener('change', async (event) => {
 
 domInputBackground.addEventListener('change', async (event) => {
     const backgroundFile = event.target.files?.[0];
-    if (!backgroundFile) return;
+    if (!backgroundFile) {
+        return;
+    }
+
     if (lyricsSettings.lyricsResourceBackground?.element?.src) {
         URL.revokeObjectURL(lyricsSettings.lyricsResourceBackground.element.src);
     }
+
     const backgroundType = backgroundFile.type.startsWith('image/') ? 'image' : 'video';
     await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.background, backgroundFile);
     lyricsStorageSave(lyricsSettings.lyricsPersistenceKeys.bgType, backgroundType);
+
     const backgroundUrl = URL.createObjectURL(backgroundFile);
     if (backgroundType === 'image') {
         const imageElement = new Image();
@@ -148,6 +147,7 @@ domInputBackground.addEventListener('change', async (event) => {
             lyricsSettings.lyricsResourceBackground = { type: 'video', element: videoElement };
             lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
         };
+
         videoElement.src = backgroundUrl;
         videoElement.load();
     }

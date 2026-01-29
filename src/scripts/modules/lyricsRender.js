@@ -99,7 +99,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
         drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
 
         if (lyricsSettings.lyricsBackgroundCurrentOpacity < 0.3) {
-            drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, 0.1)`;
+            drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, 0.08)`;
             drawContext.fillRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
         }
     } else {
@@ -121,7 +121,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
             font: `48px "${lyricsSettings.lyricsFontFace}", sans-serif`,
             x: lyricsSettings.lyricsPreviewWidth / 2, y: 120, baseline: 'top'
         });
-        
+
         drawContext.restore();
     }
 

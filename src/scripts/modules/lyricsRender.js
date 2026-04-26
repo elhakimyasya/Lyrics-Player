@@ -71,12 +71,12 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     const textNext = isNextInstrumental ? "" : textNextRaw;
     const textPrevious = isPreviousInstrumental ? "" : textPreviousRaw;
 
-    let targetOpacity = 0.9; // Default Gelap
+    let targetOpacity = 0.95; // Default Gelap
 
     if (isEnding || isCurrentInstrumental) {
         targetOpacity = 0.0; // Terang
         if (!isNextInstrumental && textNextRaw.trim() !== '' && timeUntilNextLine < 1500) {
-            targetOpacity = 0.9;
+            targetOpacity = 0.95;
         }
     }
 
@@ -109,7 +109,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     drawContext.restore();
 
     // 5. Header & Footer
-    const hfAlpha = Math.max(0, (lyricsSettings.lyricsBackgroundCurrentOpacity / 0.9));
+    const hfAlpha = Math.max(0, (lyricsSettings.lyricsBackgroundCurrentOpacity / 0.95));
     const domHeader = document.querySelector(lyricsSettings.elementSelectorTextareaHeader);
     const domFooter = document.querySelector(lyricsSettings.elementSelectorTextareaFooter);
 

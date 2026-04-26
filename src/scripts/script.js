@@ -190,7 +190,7 @@ domAudioPlayer.addEventListener('loadedmetadata', () => {
 domButtonExport.addEventListener('click', async () => {
     if (!domAudioPlayer.src) return alert('Silakan masukkan file audio terlebih dahulu.');
     domButtonExport.disabled = true;
-    domButtonExport.textContent = 'Recording...';
+    domButtonExport.textContent = 'RECORDING...';
     lyricsSettings.lyricsStateIsRecording = true;
 
     try {

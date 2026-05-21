@@ -18,7 +18,7 @@ export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, 
     if (textLines.length === 1) {
         drawContext.save();
         drawContext.globalAlpha = maxOpacity;
-        drawContext.fillStyle = '#ffffff';
+        drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
         drawContext.fillText(textLines[0], options.x, options.y);
         drawContext.restore();
         return;
@@ -48,7 +48,7 @@ export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, 
     }
 
     // 4. Eksekusi Rendering dengan Proteksi State
-    const elementColor = (currentLineIndex % 2 === 0) ? lyricsSettings.lyricsKeyColor : '#ffffff';
+    const elementColor = (currentLineIndex % 2 === 0) ? lyricsSettings.lyricsKeyColor : lyricsSettings.lyricsNonActiveTextColor;
 
     drawContext.save();
 

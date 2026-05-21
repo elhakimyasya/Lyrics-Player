@@ -25,6 +25,8 @@ const domCanvasPreview = document.querySelector(lyricsSettings.elementSelectorCa
 
 const domInputBgColor = document.querySelector(lyricsSettings.elementSelectorBgColor);
 const domInputKeyColor = document.querySelector(lyricsSettings.elementSelectorKeyColor);
+const domInputNonActiveTextColor = document.querySelector(lyricsSettings.elementSelectorNonActiveTextColor);
+const domInputSpectrumSensitivity = document.querySelector(lyricsSettings.elementSelectorSpectrumSensitivity);
 
 lyricsSettings.lyricsCanvasContext = domCanvasPreview.getContext('2d', { alpha: true });
 
@@ -38,6 +40,7 @@ const lyricsInitializeApplication = async () => {
     // Pulihkan Warna
     domInputBgColor.value = lyricsSettings.lyricsBgColor;
     domInputKeyColor.value = lyricsSettings.lyricsKeyColor;
+    domInputNonActiveTextColor.value = lyricsSettings.lyricsNonActiveTextColor;
 
     lyricsSettings.lyricsDataParsed = lyricsParse(domTextareaLyrics.value);
 
@@ -93,7 +96,7 @@ const lyricsEnsureAudioContextActive = async () => {
 domInputBgColor.addEventListener('input', (e) => {
     const color = e.target.value;
     lyricsSettings.lyricsBgColor = color;
-    lyricsStorageSave('lyrics_bg_color', color);
+    lyricsStorageSave('lyricsBgColor', color);
     if (!lyricsSettings.lyricsStateIsPlaying) {
         lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
     }
@@ -102,7 +105,16 @@ domInputBgColor.addEventListener('input', (e) => {
 domInputKeyColor.addEventListener('input', (e) => {
     const color = e.target.value;
     lyricsSettings.lyricsKeyColor = color;
-    lyricsStorageSave('lyrics_key_color', color);
+    lyricsStorageSave('lyricsKeyColor', color);
+    if (!lyricsSettings.lyricsStateIsPlaying) {
+        lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+    }
+});
+
+domInputNonActiveTextColor.addEventListener('input', (e) => {
+    const color = e.target.value;
+    lyricsSettings.lyricsNonActiveTextColor = color;
+    lyricsStorageSave('lyricsNonActiveTextColor', color);
     if (!lyricsSettings.lyricsStateIsPlaying) {
         lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
     }
@@ -196,11 +208,13 @@ domButtonExport.addEventListener('click', async () => {
     try {
         await lyricsGetAudioState(domAudioPlayer);
         await lyricsEnsureAudioContextActive();
+
         const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = lyricsSettings.lyricsPreviewWidth;
-        exportCanvas.height = lyricsSettings.lyricsPreviewHeight;
+        exportCanvas.width = 1920;
+        exportCanvas.height = 1080;
         const exportContext = exportCanvas.getContext('2d', { alpha: true });
-        const videoStream = exportCanvas.captureStream(lyricsSettings.lyricsFramesPerSecond);
+
+        const videoStream = exportCanvas.captureStream(60);
         let combinedStream = new MediaStream();
         videoStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
 
@@ -227,9 +241,13 @@ domButtonExport.addEventListener('click', async () => {
             hiddenLink.href = downloadUrl;
             hiddenLink.download = `${lyricsSettings.lyricsExportFileName}.webm`;
             hiddenLink.click();
+            
             domButtonExport.disabled = false;
-            domButtonExport.textContent = 'Export';
+            domButtonExport.textContent = 'RECORD';
             lyricsSettings.lyricsStateIsRecording = false;
+            
+            // Re-render with original canvas dimensions
+            lyricsRender(domAudioPlayer.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
         };
         mediaRecorder.start();
         domAudioPlayer.currentTime = 0;
@@ -242,14 +260,14 @@ domButtonExport.addEventListener('click', async () => {
                 mediaRecorder.stop();
                 domAudioPlayer.pause();
             } else {
-                setTimeout(renderExportFrame, 1000 / lyricsSettings.lyricsFramesPerSecond);
+                setTimeout(renderExportFrame, 1000 / 60);
             }
         };
         renderExportFrame();
     } catch (error) {
         console.error('Export Error:', error);
         domButtonExport.disabled = false;
-        domButtonExport.textContent = 'Export';
+        domButtonExport.textContent = 'RECORD';
         lyricsSettings.lyricsStateIsRecording = false;
     }
 });

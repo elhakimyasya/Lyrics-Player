@@ -154,7 +154,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
             ? Math.max(0, (1 - ((adjustedRenderTime - currentLineStart) / 200)) * 0.5)
             : (1 - animProgress) * 0.5;
         drawContext.font = `${/^\(.*\)$/.test(textPrevious) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
-        drawContext.fillStyle = '#ffffff';
+        drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
         drawContext.globalAlpha = pAlpha;
         drawContext.fillText(textPrevious, lyricsSettings.lyricsPreviewWidth / 2, (yBase - lineSpacing) - scroll);
         drawContext.restore();
@@ -174,7 +174,7 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
         drawContext.save();
         const nAlpha = timeUntilNextLine <= 1000 ? (1 - (timeUntilNextLine / 1000)) * 0.5 : 0;
         drawContext.font = `${/^\(.*\)$/.test(textNext) ? "italic " : ""}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
-        drawContext.fillStyle = '#ffffff';
+        drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
         drawContext.globalAlpha = Math.max(0, nAlpha);
         drawContext.fillText(textNext, lyricsSettings.lyricsPreviewWidth / 2, (yBase + lineSpacing) - scroll);
         drawContext.restore();

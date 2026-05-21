@@ -10,18 +10,44 @@ const hexToRgba = (hex, alpha) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+// Track mouse position for interactive spectrum
+let mouseX = 0;
+let mouseY = 0;
+let isMouseOver = false;
+
+const setupMouseTracking = (canvasElement) => {
+    if (!canvasElement || canvasElement._mouseTrackingSetup) return;
+    
+    canvasElement.addEventListener('mousemove', (e) => {
+        const rect = canvasElement.getBoundingClientRect();
+        mouseX = (e.clientX - rect.left) / rect.width;
+        mouseY = (e.clientY - rect.top) / rect.height;
+        isMouseOver = true;
+    });
+    
+    canvasElement.addEventListener('mouseleave', () => {
+        isMouseOver = false;
+    });
+    
+    canvasElement._mouseTrackingSetup = true;
+};
+
 export const lyricsRenderSpectrum = (drawContext) => {
     if (!lyricsSettings.lyricsAudioAnalyser || !lyricsSettings.lyricsAudioFrequencyData) return;
 
+    // Setup mouse tracking on canvas
+    const canvasElement = document.querySelector(lyricsSettings.elementSelectorCanvas);
+    if (canvasElement) setupMouseTracking(canvasElement);
+
     // Ambil Key Color terbaru dari settings
-    const keyColor = lyricsSettings.lyricsKeyColor || '#3b82f6';
+    const keyColor = lyricsSettings.lyricsKeyColor || '#ffde59';
 
     lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(lyricsSettings.lyricsAudioFrequencyData);
 
     const spectrumBarsCount = 80;
     const spectrumBinSize = Math.floor(lyricsSettings.lyricsAudioFrequencyData.length / spectrumBarsCount);
-    const spectrumBarGap = 3;
-    const spectrumBarWidth = (lyricsSettings.lyricsPreviewWidth / 2) / spectrumBarsCount;
+    const spectrumBarGap = 2;
+    const spectrumBarWidth = lyricsSettings.lyricsPreviewWidth / (spectrumBarsCount * 2);
     const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * 0.12;
     const spectrumBaseY = lyricsSettings.lyricsPreviewHeight;
     const spectrumThreshold = 5;
@@ -41,6 +67,15 @@ export const lyricsRenderSpectrum = (drawContext) => {
         }
 
         if (frequencyMaxValue < spectrumThreshold) frequencyMaxValue = 0;
+
+        // Interactive mouse effect: boost bars near mouse X position
+        let interactiveBoost = 1.0;
+        if (isMouseOver) {
+            const barCenterX = (index / spectrumBarsCount);
+            const distance = Math.abs(barCenterX - mouseX);
+            interactiveBoost = 1 + (1 - distance) * 0.3; // Max 30% boost near mouse
+        }
+        frequencyMaxValue = Math.min(255, frequencyMaxValue * interactiveBoost);
 
         const spectrumScale = 1 - (index / (spectrumBarsCount - 1)) * 0.98;
         const spectrumBarHeight = (frequencyMaxValue / 255) * spectrumMaxHeight * spectrumScale;

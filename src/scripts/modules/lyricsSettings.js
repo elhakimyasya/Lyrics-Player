@@ -14,6 +14,7 @@ export const lyricsSettings = {
     elementSelectorCanvas: '.element_canvas_preview',
     elementSelectorBgColor: '#element_input_bg_color',
     elementSelectorKeyColor: '#element_input_key_color',
+    elementSelectorNonActiveTextColor: '#element_input_non_active_text_color',
 
     // State & Data
     lyricsDataParsed: [],
@@ -44,6 +45,7 @@ export const lyricsSettings = {
     lyricsFadeSpeed: 0.02, // Kecepatan fade (semakin kecil semakin lambat/halus)
     lyricsBgColor: localStorage.getItem('lyricsBgColor') || '#000000',
     lyricsKeyColor: localStorage.getItem('lyricsKeyColor') || '#ffde59',
+    lyricsNonActiveTextColor: localStorage.getItem('lyricsNonActiveTextColor') || '#ffffff',
     lyricsPersistenceKeys: {
         audio: 'persistent_audio_file',
         background: 'persistent_bg_file',

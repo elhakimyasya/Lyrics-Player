@@ -1,65 +1,57 @@
 import { lyricsSettings } from "./lyricsSettings";
 
 /**
- * Merender teks header atau footer dengan efek fade in/out yang halus.
- * Opacity dikunci maksimal di 50% (0.5) tanpa ada lonjakan ke 100%.
+ * Merender teks header atau footer dengan fade yang halus.
+ * Gerakan alpha mengikuti kondisi global dan crossfade antar baris.
  */
 export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, options) => {
     if (!textLines || !textLines.length) return;
 
-    // 1. Setup dasar font
     drawContext.font = options.font;
     drawContext.textAlign = 'center';
     drawContext.textBaseline = options.baseline;
 
+    const baseAlpha = Math.max(0, Math.min(1, options.baseAlpha ?? 1));
     const maxOpacity = 0.5;
 
-    // Jika hanya 1 baris, tampilkan statis permanen di 50%
     if (textLines.length === 1) {
         drawContext.save();
-        drawContext.globalAlpha = maxOpacity;
+        drawContext.globalAlpha = maxOpacity * baseAlpha;
         drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
         drawContext.fillText(textLines[0], options.x, options.y);
         drawContext.restore();
         return;
     }
 
-    // 2. Kalkulasi waktu untuk rotasi teks
     const currentTimeSeconds = currentTimeMs / 1000;
     const lineDurationSeconds = options.lineDuration || 6;
     const fadeDurationSeconds = 1.0;
-
     const totalLines = textLines.length;
     const currentLineIndex = Math.floor(currentTimeSeconds / lineDurationSeconds) % totalLines;
+    const nextLineIndex = (currentLineIndex + 1) % totalLines;
     const timeWithinCycle = currentTimeSeconds % lineDurationSeconds;
+    const fadeStart = Math.max(0, lineDurationSeconds - fadeDurationSeconds);
 
-    // 3. Logika Alpha yang aman (Linear Ramp)
-    // Kita mulai dengan asumsi opacity penuh (dalam konteks 0.5)
-    let calculatedAlpha = maxOpacity;
+    const transitionProgress = timeWithinCycle >= fadeStart
+        ? Math.max(0, Math.min(1, (timeWithinCycle - fadeStart) / fadeDurationSeconds))
+        : 0;
 
-    if (timeWithinCycle < fadeDurationSeconds) {
-        // Fade In: dari 0.0 ke 0.5
-        calculatedAlpha = (timeWithinCycle / fadeDurationSeconds) * maxOpacity;
-    }
-    else if (timeWithinCycle > (lineDurationSeconds - fadeDurationSeconds)) {
-        // Fade Out: dari 0.5 ke 0.0
-        const timeInFadeOutZone = timeWithinCycle - (lineDurationSeconds - fadeDurationSeconds);
-        calculatedAlpha = maxOpacity - ((timeInFadeOutZone / fadeDurationSeconds) * maxOpacity);
-    }
+    const currentAlpha = 1 - transitionProgress;
+    const nextAlpha = transitionProgress;
 
-    // 4. Eksekusi Rendering dengan Proteksi State
-    const elementColor = (currentLineIndex % 2 === 0) ? lyricsSettings.lyricsKeyColor : lyricsSettings.lyricsNonActiveTextColor;
+    const colorForLine = (lineIndex) => (lineIndex % 2 === 0)
+        ? lyricsSettings.lyricsKeyColor
+        : lyricsSettings.lyricsNonActiveTextColor;
 
     drawContext.save();
 
-    // Gunakan clamp agar tidak pernah lebih dari 0.5 atau kurang dari 0
-    const finalAlpha = Math.max(0, Math.min(maxOpacity, calculatedAlpha));
-
-    drawContext.globalAlpha = finalAlpha;
-    drawContext.fillStyle = elementColor;
-
-    // Gambar teks
+    drawContext.globalAlpha = currentAlpha * maxOpacity * baseAlpha;
+    drawContext.fillStyle = colorForLine(currentLineIndex);
     drawContext.fillText(textLines[currentLineIndex], options.x, options.y);
+
+    drawContext.globalAlpha = nextAlpha * maxOpacity * baseAlpha;
+    drawContext.fillStyle = colorForLine(nextLineIndex);
+    drawContext.fillText(textLines[nextLineIndex], options.x, options.y);
 
     drawContext.restore();
 };

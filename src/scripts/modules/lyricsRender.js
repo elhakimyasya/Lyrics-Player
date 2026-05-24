@@ -109,31 +109,26 @@ export const lyricsRender = (currentTimeMs, drawContext) => {
     drawContext.restore();
 
     // 5. Header & Footer
-    const hfAlpha = Math.max(0, (lyricsSettings.lyricsBackgroundCurrentOpacity / 0.95));
+    const hfAlpha = Math.max(0, Math.min(1, lyricsSettings.lyricsBackgroundCurrentOpacity / 0.95));
     const domHeader = document.querySelector(lyricsSettings.elementSelectorTextareaHeader);
     const domFooter = document.querySelector(lyricsSettings.elementSelectorTextareaFooter);
 
-    if (domHeader?.value.trim() && hfAlpha > 0.01) {
-        drawContext.save();
-        drawContext.globalAlpha = hfAlpha;
+    if (domHeader?.value.trim()) {
         const lines = domHeader.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         lyricsRenderHeaderFooter(drawContext, lines, adjustedRenderTime, {
             font: `48px "${lyricsSettings.lyricsFontFace}", sans-serif`,
-            x: lyricsSettings.lyricsPreviewWidth / 2, y: 120, baseline: 'top'
+            x: lyricsSettings.lyricsPreviewWidth / 2, y: 120, baseline: 'top',
+            baseAlpha: hfAlpha
         });
-
-        drawContext.restore();
     }
 
-    if (domFooter?.value.trim() && hfAlpha > 0.01) {
-        drawContext.save();
-        drawContext.globalAlpha = hfAlpha;
+    if (domFooter?.value.trim()) {
         const lines = domFooter.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         lyricsRenderHeaderFooter(drawContext, lines, adjustedRenderTime, {
             font: `32px "${lyricsSettings.lyricsFontFace}", sans-serif`,
-            x: lyricsSettings.lyricsPreviewWidth / 2, y: lyricsSettings.lyricsPreviewHeight - 120, baseline: 'bottom'
+            x: lyricsSettings.lyricsPreviewWidth / 2, y: lyricsSettings.lyricsPreviewHeight - 120, baseline: 'bottom',
+            baseAlpha: hfAlpha
         });
-        drawContext.restore();
     }
 
     if (totalLines === 0) return;

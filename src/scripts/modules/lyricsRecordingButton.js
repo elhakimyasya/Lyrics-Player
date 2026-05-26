@@ -1,9 +1,6 @@
-const recordingButtonText = {
-    idle: 'RECORD',
-    active: 'RECORDING...',
-};
+import { lyricsSettings } from './lyricsSettings';
 
 export const lyricsSetRecordingButtonState = (buttonElement, isRecording) => {
     buttonElement.disabled = isRecording;
-    buttonElement.textContent = isRecording ? recordingButtonText.active : recordingButtonText.idle;
+    buttonElement.textContent = isRecording ? lyricsSettings.lyricsRecordingButtonText.active : lyricsSettings.lyricsRecordingButtonText.idle;
 };

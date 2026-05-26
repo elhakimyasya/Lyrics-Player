@@ -4,17 +4,17 @@ export const lyricsRenderAnalyzer = (audioElement) => {
     if (!lyricsSettings.lyricsAudioContext) {
         lyricsSettings.lyricsAudioContext = new (window.AudioContext || window.webkitAudioContext)();
         lyricsSettings.lyricsAudioAnalyser = lyricsSettings.lyricsAudioContext.createAnalyser();
-        lyricsSettings.lyricsAudioAnalyser.fftSize = 1024;
-        lyricsSettings.lyricsAudioAnalyser.smoothingTimeConstant = 0.1;
+        lyricsSettings.lyricsAudioAnalyser.fftSize = lyricsSettings.lyricsAudioAnalyserFftSize;
+        lyricsSettings.lyricsAudioAnalyser.smoothingTimeConstant = lyricsSettings.lyricsAudioAnalyserSmoothing;
         lyricsSettings.lyricsAudioSource = lyricsSettings.lyricsAudioContext.createMediaElementSource(audioElement);
 
         const audioBassFilter = lyricsSettings.lyricsAudioContext.createBiquadFilter();
-        audioBassFilter.type = 'lowshelf';
-        audioBassFilter.frequency.value = 150;
-        audioBassFilter.gain.value = 6;
+        audioBassFilter.type = lyricsSettings.lyricsAudioBassFilterType;
+        audioBassFilter.frequency.value = lyricsSettings.lyricsAudioBassFilterFrequency;
+        audioBassFilter.gain.value = lyricsSettings.lyricsAudioBassFilterGain;
 
         const audioGainNode = lyricsSettings.lyricsAudioContext.createGain();
-        audioGainNode.gain.value = 1.0;
+        audioGainNode.gain.value = lyricsSettings.lyricsAudioOutputGain;
         lyricsSettings.lyricsAudioSource.connect(audioBassFilter);
         audioBassFilter.connect(lyricsSettings.lyricsAudioAnalyser);
         lyricsSettings.lyricsAudioAnalyser.connect(audioGainNode);

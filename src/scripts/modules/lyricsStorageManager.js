@@ -1,11 +1,10 @@
-const databaseName = 'LyricsAppDB';
-const storeName = 'AssetsStore';
+import { lyricsSettings } from './lyricsSettings';
 
 const openDatabase = () => {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(databaseName, 1);
+        const request = indexedDB.open(lyricsSettings.lyricsDatabaseName, lyricsSettings.lyricsDatabaseVersion);
         request.onupgradeneeded = () => {
-            request.result.createObjectStore(storeName);
+            request.result.createObjectStore(lyricsSettings.lyricsDatabaseStoreName);
         };
 
         request.onsuccess = () => resolve(request.result);
@@ -15,16 +14,16 @@ const openDatabase = () => {
 
 export const lyricsStorageFileSave = async (key, blob) => {
     const db = await openDatabase();
-    const transaction = db.transaction(storeName, 'readwrite');
+    const transaction = db.transaction(lyricsSettings.lyricsDatabaseStoreName, lyricsSettings.lyricsDatabaseReadWriteMode);
 
-    transaction.objectStore(storeName).put(blob, key);
+    transaction.objectStore(lyricsSettings.lyricsDatabaseStoreName).put(blob, key);
 };
 
 export const lyricsStorageFileLoad = async (key) => {
     const db = await openDatabase();
     
     return new Promise((resolve) => {
-        const request = db.transaction(storeName).objectStore(storeName).get(key);
+        const request = db.transaction(lyricsSettings.lyricsDatabaseStoreName).objectStore(lyricsSettings.lyricsDatabaseStoreName).get(key);
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => resolve(null);

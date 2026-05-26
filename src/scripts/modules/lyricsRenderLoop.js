@@ -6,7 +6,7 @@ let lastRenderTime = 0;
 export const lyricsRenderLoop = () => {
     const audioPlayerElement = document.querySelector(lyricsSettings.elementSelectorAudio);
     const currentTime = performance.now();
-    const renderThrottleMs = lyricsSettings.lyricsStateIsRecording ? 0 : 1000 / lyricsSettings.lyricsFramesPerSecond;
+    const renderThrottleMs = lyricsSettings.lyricsStateIsRecording ? 0 : lyricsSettings.lyricsMillisecondsPerSecond / lyricsSettings.lyricsFramesPerSecond;
 
     if (!lyricsSettings.lyricsStateIsRecording && currentTime - lastRenderTime < renderThrottleMs) {
         lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsRenderLoop);
@@ -16,7 +16,7 @@ export const lyricsRenderLoop = () => {
 
     lastRenderTime = currentTime;
     
-    lyricsRender(audioPlayerElement.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+    lyricsRender(audioPlayerElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, lyricsSettings.lyricsCanvasContext);
 
     lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsRenderLoop);
 };

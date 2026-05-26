@@ -19,7 +19,5 @@ export const lyricsDom = {
 };
 
 export const lyricsGetCanvasContext = (canvasElement) => {
-    return canvasElement.getContext('2d', {
-        alpha: true,
-    });
+    return canvasElement.getContext(lyricsSettings.lyricsCanvasContextType, lyricsSettings.lyricsCanvasContextOptions);
 };

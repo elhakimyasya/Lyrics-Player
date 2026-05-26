@@ -16,19 +16,19 @@ export const lyricsBindTextInputEvents = (dom) => {
         lyricsSettings.lyricsDataParsed = lyricsParse(content);
 
         lyricsRenderPreviewFrame(dom.audioPlayer);
-        lyricsStorageSave('lyrics_textarea', content);
+        lyricsStorageSave(lyricsSettings.lyricsStorageKeys.lyricsText, content);
     });
 
     dom.textareaHeader.addEventListener('input', () => {
-        persistOverlayText('lyrics_header', dom.textareaHeader, dom.audioPlayer);
+        persistOverlayText(lyricsSettings.lyricsStorageKeys.lyricsHeader, dom.textareaHeader, dom.audioPlayer);
     });
 
     dom.textareaFooter.addEventListener('input', () => {
-        persistOverlayText('lyrics_footer', dom.textareaFooter, dom.audioPlayer);
+        persistOverlayText(lyricsSettings.lyricsStorageKeys.lyricsFooter, dom.textareaFooter, dom.audioPlayer);
     });
 
     dom.inputOffset.addEventListener('input', () => {
-        lyricsStorageSave('lyrics_offset', dom.inputOffset.value);
+        lyricsStorageSave(lyricsSettings.lyricsStorageKeys.lyricsOffset, dom.inputOffset.value);
         lyricsRenderPreviewFrameWhenIdle(dom.audioPlayer);
     });
 };

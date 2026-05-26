@@ -45,7 +45,7 @@ export const lyricsGetRenderLineState = (adjustedRenderTime, audioElement) => {
     const totalLines = lyricsSettings.lyricsDataParsed.length;
     const activeLineIndex = findActiveLineIndex(adjustedRenderTime);
     const currentLineStart = totalLines > 0 ? lyricsSettings.lyricsDataParsed[activeLineIndex].timeMs : 0;
-    const currentLineEnd = activeLineIndex + 1 < totalLines ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs : audioElement.duration * 1000;
+    const currentLineEnd = activeLineIndex + 1 < totalLines ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs : audioElement.duration * lyricsSettings.lyricsMillisecondsPerSecond;
     const timeUntilNextLine = currentLineEnd - adjustedRenderTime;
     const lineTexts = getLineTexts(activeLineIndex, totalLines);
     const isEnding = activeLineIndex >= totalLines - 2 && lineTexts.textActiveRaw.trim() === '' && lineTexts.textNextRaw.trim() === '';

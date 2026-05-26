@@ -15,22 +15,22 @@ const bindColorInput = ({ inputElement, storageKey, settingKey, audioElement }) 
 export const lyricsBindColorInputEvents = (dom) => {
     bindColorInput({
         inputElement: dom.inputBgColor,
-        storageKey: 'lyricsBgColor',
-        settingKey: 'lyricsBgColor',
+        storageKey: lyricsSettings.lyricsStorageKeys.bgColor,
+        settingKey: lyricsSettings.lyricsColorSettingKeys.bgColor,
         audioElement: dom.audioPlayer,
     });
 
     bindColorInput({
         inputElement: dom.inputKeyColor,
-        storageKey: 'lyricsKeyColor',
-        settingKey: 'lyricsKeyColor',
+        storageKey: lyricsSettings.lyricsStorageKeys.keyColor,
+        settingKey: lyricsSettings.lyricsColorSettingKeys.keyColor,
         audioElement: dom.audioPlayer,
     });
 
     bindColorInput({
         inputElement: dom.inputNonActiveTextColor,
-        storageKey: 'lyricsNonActiveTextColor',
-        settingKey: 'lyricsNonActiveTextColor',
+        storageKey: lyricsSettings.lyricsStorageKeys.nonActiveTextColor,
+        settingKey: lyricsSettings.lyricsColorSettingKeys.nonActiveTextColor,
         audioElement: dom.audioPlayer,
     });
 };

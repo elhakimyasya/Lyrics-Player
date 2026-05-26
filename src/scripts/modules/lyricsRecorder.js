@@ -11,7 +11,7 @@ import { lyricsStartPreviewLoop, lyricsStopPreviewLoop } from './lyricsPreviewLo
 
 export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
     if (!audioElement.src) {
-        alert('Silakan masukkan file audio terlebih dahulu.');
+        alert(lyricsSettings.lyricsRecordingMissingAudioMessage);
 
         return;
     }
@@ -25,9 +25,7 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
         await lyricsEnsureAudioContextActive();
 
         const exportCanvas = lyricsCreateRecordingCanvas();
-        const exportContext = exportCanvas.getContext('2d', {
-            alpha: true,
-        });
+        const exportContext = exportCanvas.getContext(lyricsSettings.lyricsCanvasContextType, lyricsSettings.lyricsCanvasContextOptions);
         const recordingStream = lyricsCreateRecordingStream(exportCanvas, audioElement);
         const mediaRecorder = lyricsCreateMediaRecorder(recordingStream.stream);
         const recordingChunks = [];
@@ -46,7 +44,7 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
             lyricsSettings.lyricsStateIsRecording = false;
 
             lyricsSetRecordingButtonState(buttonElement, false);
-            lyricsRender(audioElement.currentTime * 1000, lyricsSettings.lyricsCanvasContext);
+            lyricsRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, lyricsSettings.lyricsCanvasContext);
 
             if (audioElement.paused || audioElement.ended) {
                 lyricsStopPreviewLoop();
@@ -68,9 +66,9 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
                 return;
             }
 
-            lyricsRender(audioElement.currentTime * 1000, exportContext);
+            lyricsRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, exportContext);
 
-            if (audioElement.ended || audioElement.currentTime >= audioElement.duration - 0.05) {
+            if (audioElement.ended || audioElement.currentTime >= audioElement.duration - lyricsSettings.lyricsRecordingStopOffsetSeconds) {
                 mediaRecorder.stop();
                 audioElement.pause();
 
@@ -80,7 +78,7 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
             recordingFrameId = requestAnimationFrame(renderExportFrame);
         };
 
-        mediaRecorder.start(1000);
+        mediaRecorder.start(lyricsSettings.lyricsRecordingChunkIntervalMs);
         audioElement.currentTime = 0;
 
         await audioElement.play();

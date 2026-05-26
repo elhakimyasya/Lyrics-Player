@@ -7,17 +7,17 @@ import { lyricsRenderPreviewFrame } from './lyricsCanvasRender';
 
 const revokeCurrentBackgroundUrl = () => {
     const sourceUrl = lyricsSettings.lyricsResourceBackground?.element?.src;
-    if (sourceUrl?.startsWith('blob:')) {
+    if (sourceUrl?.startsWith(lyricsSettings.lyricsBlobUrlPrefix)) {
         URL.revokeObjectURL(sourceUrl);
     }
 };
 
 export const lyricsCreateBackgroundResource = (backgroundUrl, backgroundType, onReady) => {
-    if (backgroundType === 'image') {
+    if (backgroundType === lyricsSettings.lyricsMediaTypes.image) {
         const imageElement = new Image();
         imageElement.onload = () => {
             lyricsSettings.lyricsResourceBackground = {
-                type: 'image',
+                type: lyricsSettings.lyricsMediaTypes.image,
                 element: imageElement,
             };
 
@@ -29,7 +29,7 @@ export const lyricsCreateBackgroundResource = (backgroundUrl, backgroundType, on
         return;
     }
 
-    const videoElement = document.createElement('video');
+    const videoElement = document.createElement(lyricsSettings.lyricsVideoElementTag);
     videoElement.src = backgroundUrl;
     videoElement.muted = true;
     videoElement.loop = true;
@@ -40,7 +40,7 @@ export const lyricsCreateBackgroundResource = (backgroundUrl, backgroundType, on
         });
 
         lyricsSettings.lyricsResourceBackground = {
-            type: 'video',
+            type: lyricsSettings.lyricsMediaTypes.video,
             element: videoElement,
         };
 
@@ -98,7 +98,7 @@ export const lyricsHandleBackgroundFileChange = async (event, audioElement) => {
 
     revokeCurrentBackgroundUrl();
 
-    const backgroundType = backgroundFile.type.startsWith('image/') ? 'image' : 'video';
+    const backgroundType = backgroundFile.type.startsWith(lyricsSettings.lyricsImageMimePrefix) ? lyricsSettings.lyricsMediaTypes.image : lyricsSettings.lyricsMediaTypes.video;
 
     await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.background, backgroundFile);
 

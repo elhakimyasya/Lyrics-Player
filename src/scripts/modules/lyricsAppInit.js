@@ -5,13 +5,11 @@ import { lyricsNormalize } from './lyricsNormalize';
 import { lyricsRender } from './lyricsRender';
 import { lyricsRestoreAudioAsset, lyricsRestoreBackgroundAsset } from './lyricsMediaAssets';
 
-const defaultLyrics = '[00:00.00] Intro\n[00:05.00] Lirik Baris Pertama';
-
 export const lyricsInitializeApplication = async (dom) => {
-    dom.textareaLyrics.value = lyricsNormalize(lyricsStorageLoad('lyrics_textarea', defaultLyrics));
-    dom.textareaHeader.value = lyricsStorageLoad('lyrics_header', '');
-    dom.textareaFooter.value = lyricsStorageLoad('lyrics_footer', '');
-    dom.inputOffset.value = lyricsStorageLoad('lyrics_offset', '0');
+    dom.textareaLyrics.value = lyricsNormalize(lyricsStorageLoad(lyricsSettings.lyricsStorageKeys.lyricsText, lyricsSettings.lyricsDefaultLyrics));
+    dom.textareaHeader.value = lyricsStorageLoad(lyricsSettings.lyricsStorageKeys.lyricsHeader, '');
+    dom.textareaFooter.value = lyricsStorageLoad(lyricsSettings.lyricsStorageKeys.lyricsFooter, '');
+    dom.inputOffset.value = lyricsStorageLoad(lyricsSettings.lyricsStorageKeys.lyricsOffset, lyricsSettings.lyricsDefaultOffset);
 
     dom.inputBgColor.value = lyricsSettings.lyricsBgColor;
     dom.inputKeyColor.value = lyricsSettings.lyricsKeyColor;

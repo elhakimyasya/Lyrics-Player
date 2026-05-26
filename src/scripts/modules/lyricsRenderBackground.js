@@ -1,15 +1,15 @@
 import { lyricsSettings } from './lyricsSettings';
 
 const hexToRgb = (hex) => ({
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
+    r: parseInt(hex.slice(1, 3), lyricsSettings.lyricsHexColorRadix),
+    g: parseInt(hex.slice(3, 5), lyricsSettings.lyricsHexColorRadix),
+    b: parseInt(hex.slice(5, 7), lyricsSettings.lyricsHexColorRadix),
 });
 
 const drawResourceCover = (ctx, resource, canvasWidth, canvasHeight) => {
     const element = resource.element;
-    const resourceWidth = resource.type === 'video' ? element.videoWidth : element.width;
-    const resourceHeight = resource.type === 'video' ? element.videoHeight : element.height;
+    const resourceWidth = resource.type === lyricsSettings.lyricsMediaTypes.video ? element.videoWidth : element.width;
+    const resourceHeight = resource.type === lyricsSettings.lyricsMediaTypes.video ? element.videoHeight : element.height;
     if (!resourceWidth || !resourceHeight) {
         return;
     }
@@ -56,8 +56,8 @@ export const lyricsRenderBackground = (drawContext) => {
     drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, ${lyricsSettings.lyricsBackgroundCurrentOpacity})`;
     drawContext.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    if (lyricsSettings.lyricsBackgroundCurrentOpacity < 0.3) {
-        drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, 0.1)`;
+    if (lyricsSettings.lyricsBackgroundCurrentOpacity < lyricsSettings.lyricsBackgroundRevealThreshold) {
+        drawContext.fillStyle = `rgba(${r}, ${g}, ${b}, ${lyricsSettings.lyricsBackgroundRevealOverlayOpacity})`;
         drawContext.fillRect(0, 0, canvasWidth, canvasHeight);
     }
 

@@ -4,9 +4,9 @@ import { lyricsSettings } from './lyricsSettings';
  * Mengonversi HEX ke RGBA string
  */
 const hexToRgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
+    const r = parseInt(hex.slice(1, 3), lyricsSettings.lyricsHexColorRadix);
+    const g = parseInt(hex.slice(3, 5), lyricsSettings.lyricsHexColorRadix);
+    const b = parseInt(hex.slice(5, 7), lyricsSettings.lyricsHexColorRadix);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
@@ -44,22 +44,22 @@ export const lyricsRenderSpectrum = (drawContext) => {
     }
 
     // Ambil Key Color terbaru dari settings
-    const keyColor = lyricsSettings.lyricsKeyColor || '#ffde59';
+    const keyColor = lyricsSettings.lyricsKeyColor || lyricsSettings.lyricsDefaultKeyColor;
 
     lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(lyricsSettings.lyricsAudioFrequencyData);
 
-    const spectrumBarsCount = 80;
+    const spectrumBarsCount = lyricsSettings.lyricsSpectrumBarsCount;
     const spectrumBinSize = Math.floor(lyricsSettings.lyricsAudioFrequencyData.length / spectrumBarsCount);
-    const spectrumBarGap = 2;
+    const spectrumBarGap = lyricsSettings.lyricsSpectrumBarGap;
     const spectrumBarWidth = lyricsSettings.lyricsPreviewWidth / (spectrumBarsCount * 2);
-    const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * 0.12;
+    const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsSpectrumMaxHeightRatio;
     const spectrumBaseY = lyricsSettings.lyricsPreviewHeight;
-    const spectrumThreshold = 5;
+    const spectrumThreshold = lyricsSettings.lyricsSpectrumThreshold;
 
     // Buat Gradien berdasarkan Key Color yang dipilih user
     const spectrumGradient = drawContext.createLinearGradient(0, spectrumBaseY, 0, spectrumBaseY - spectrumMaxHeight);
-    spectrumGradient.addColorStop(0, hexToRgba(keyColor, 0.1));
-    spectrumGradient.addColorStop(1, hexToRgba(keyColor, 0.9));
+    spectrumGradient.addColorStop(0, hexToRgba(keyColor, lyricsSettings.lyricsSpectrumGradientStartAlpha));
+    spectrumGradient.addColorStop(1, hexToRgba(keyColor, lyricsSettings.lyricsSpectrumGradientEndAlpha));
 
     drawContext.fillStyle = spectrumGradient;
 
@@ -82,12 +82,12 @@ export const lyricsRenderSpectrum = (drawContext) => {
             const barCenterX = index / spectrumBarsCount;
             const distance = Math.abs(barCenterX - mouseX);
             // Max 30% boost near mouse
-            interactiveBoost = 1 + (1 - distance) * 0.3;
+            interactiveBoost = 1 + (1 - distance) * lyricsSettings.lyricsSpectrumInteractiveBoost;
         }
 
         frequencyMaxValue = Math.min(255, frequencyMaxValue * interactiveBoost);
 
-        const spectrumScale = 1 - (index / (spectrumBarsCount - 1)) * 0.98;
+        const spectrumScale = 1 - (index / (spectrumBarsCount - 1)) * lyricsSettings.lyricsSpectrumEdgeScale;
         const spectrumBarHeight = (frequencyMaxValue / 255) * spectrumMaxHeight * spectrumScale;
         const drawY = spectrumBaseY - spectrumBarHeight;
 

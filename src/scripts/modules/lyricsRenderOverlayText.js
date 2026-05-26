@@ -22,20 +22,20 @@ const renderOverlayLines = (drawContext, lines, adjustedRenderTime, options) => 
 };
 
 export const lyricsRenderOverlayText = (drawContext, adjustedRenderTime) => {
-    const overlayAlpha = Math.max(0, Math.min(1, lyricsSettings.lyricsBackgroundCurrentOpacity / 0.95));
+    const overlayAlpha = Math.max(0, Math.min(1, lyricsSettings.lyricsBackgroundCurrentOpacity / lyricsSettings.lyricsOverlayOpacityReference));
 
     renderOverlayLines(drawContext, getTextareaLines(lyricsSettings.elementSelectorTextareaHeader), adjustedRenderTime, {
-        font: `48px "${lyricsSettings.lyricsFontFace}", sans-serif`,
+        font: `${lyricsSettings.lyricsOverlayHeaderFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`,
         x: lyricsSettings.lyricsPreviewWidth / 2,
-        y: 120,
+        y: lyricsSettings.lyricsOverlayHeaderY,
         baseline: 'top',
         baseAlpha: overlayAlpha,
     });
 
     renderOverlayLines(drawContext, getTextareaLines(lyricsSettings.elementSelectorTextareaFooter), adjustedRenderTime, {
-        font: `32px "${lyricsSettings.lyricsFontFace}", sans-serif`,
+        font: `${lyricsSettings.lyricsOverlayFooterFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`,
         x: lyricsSettings.lyricsPreviewWidth / 2,
-        y: lyricsSettings.lyricsPreviewHeight - 120,
+        y: lyricsSettings.lyricsPreviewHeight - lyricsSettings.lyricsOverlayFooterBottomOffset,
         baseline: 'bottom',
         baseAlpha: overlayAlpha,
     });

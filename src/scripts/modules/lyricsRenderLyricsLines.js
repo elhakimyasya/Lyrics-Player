@@ -7,18 +7,18 @@ const getAnimationProgress = (lineState, adjustedRenderTime) => {
 
 const getPreviousLineAlpha = (lineState, adjustedRenderTime, animationProgress) => {
     if (lineState.isCurrentInstrumental || lineState.isEnding) {
-        return Math.max(0, (1 - (adjustedRenderTime - lineState.currentLineStart) / 200) * 0.5);
+        return Math.max(0, (1 - (adjustedRenderTime - lineState.currentLineStart) / lyricsSettings.lyricsPreviousLineFadeOutMs) * lyricsSettings.lyricsInactiveLineOpacity);
     }
 
-    return (1 - animationProgress) * 0.5;
+    return (1 - animationProgress) * lyricsSettings.lyricsInactiveLineOpacity;
 };
 
 const getNextLineAlpha = (lineState) => {
-    if (lineState.timeUntilNextLine > 1000) {
+    if (lineState.timeUntilNextLine > lyricsSettings.lyricsNextLineFadeInMs) {
         return 0;
     }
 
-    return Math.max(0, (1 - lineState.timeUntilNextLine / 1000) * 0.5);
+    return Math.max(0, (1 - lineState.timeUntilNextLine / lyricsSettings.lyricsNextLineFadeInMs) * lyricsSettings.lyricsInactiveLineOpacity);
 };
 
 export const lyricsRenderLyricsLines = (drawContext, lineState, adjustedRenderTime) => {
@@ -27,8 +27,8 @@ export const lyricsRenderLyricsLines = (drawContext, lineState, adjustedRenderTi
     }
 
     const animationProgress = getAnimationProgress(lineState, adjustedRenderTime);
-    const lineSpacing = 120;
-    const yBase = lyricsSettings.lyricsPreviewHeight * 0.55;
+    const lineSpacing = lyricsSettings.lyricsLineSpacing;
+    const yBase = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsLineBaseYRatio;
     const scroll = animationProgress * lineSpacing;
     const centerX = lyricsSettings.lyricsPreviewWidth / 2;
 

@@ -1,6 +1,8 @@
+import { lyricsSettings } from './lyricsSettings';
+
 export const lyricsGetAudioState = (audioElement) => {
     return new Promise((resolve, reject) => {
-        if (audioElement.readyState >= 2) return resolve();
+        if (audioElement.readyState >= lyricsSettings.lyricsAudioReadyStateCanPlay) return resolve();
 
         const handleCanPlay = () => {
             cleanupListeners();

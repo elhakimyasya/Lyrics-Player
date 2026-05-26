@@ -1,3 +1,5 @@
+import { lyricsSettings } from './lyricsSettings';
+
 export const lyricsParse = (text) => {
     const lyricOutput = [];
     const lyricTimestamp = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
@@ -16,11 +18,11 @@ export const lyricsParse = (text) => {
         const lyricTime = [];
 
         while ((lyricMinute = lyricTimestamp.exec(lyricLine)) !== null) {
-            const timeMinute = parseInt(lyricMinute[1], 10);
-            const timeSecond = parseInt(lyricMinute[2], 10);
-            const timeMilisecond = lyricMinute[3] ? parseInt((lyricMinute[3] + '00').slice(0, 3), 10) : 0;
-            
-            lyricTime.push((timeMinute * 60 + timeSecond) * 1000 + timeMilisecond);
+            const timeMinute = parseInt(lyricMinute[1], lyricsSettings.lyricsNumberRadix);
+            const timeSecond = parseInt(lyricMinute[2], lyricsSettings.lyricsNumberRadix);
+            const timeMilisecond = lyricMinute[3] ? parseInt((lyricMinute[3] + lyricsSettings.lyricsTimestampMillisecondPadding).slice(0, lyricsSettings.lyricsTimestampMillisecondDigits), lyricsSettings.lyricsNumberRadix) : 0;
+
+            lyricTime.push((timeMinute * lyricsSettings.lyricsSecondsPerMinute + timeSecond) * lyricsSettings.lyricsMillisecondsPerSecond + timeMilisecond);
             lyricLastIndex = lyricTimestamp.lastIndex;
         }
 

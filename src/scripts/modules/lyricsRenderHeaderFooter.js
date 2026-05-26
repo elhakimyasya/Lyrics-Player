@@ -1,9 +1,9 @@
 import { lyricsSettings } from './lyricsSettings';
 
 const getLoopingLineState = (textLines, currentTimeMs, options) => {
-    const currentTimeSeconds = currentTimeMs / 1000;
-    const lineDurationSeconds = options.lineDuration || 6;
-    const fadeDurationSeconds = Math.min(options.fadeDuration || 1, lineDurationSeconds / 2);
+    const currentTimeSeconds = currentTimeMs / lyricsSettings.lyricsMillisecondsPerSecond;
+    const lineDurationSeconds = options.lineDuration || lyricsSettings.lyricsOverlayLineDurationSeconds;
+    const fadeDurationSeconds = Math.min(options.fadeDuration || lyricsSettings.lyricsOverlayFadeDurationSeconds, lineDurationSeconds / 2);
     const currentLineIndex = Math.floor(currentTimeSeconds / lineDurationSeconds) % textLines.length;
     const timeWithinCycle = currentTimeSeconds % lineDurationSeconds;
 
@@ -32,7 +32,7 @@ export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, 
     drawContext.textBaseline = options.baseline;
 
     const baseAlpha = Math.max(0, Math.min(1, options.baseAlpha ?? 1));
-    const maxOpacity = 0.5;
+    const maxOpacity = lyricsSettings.lyricsOverlayMaxOpacity;
 
     if (textLines.length === 1) {
         drawContext.save();

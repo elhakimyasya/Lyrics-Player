@@ -2,8 +2,8 @@ import { lyricsSettings } from './lyricsSettings';
 
 const getLyricFont = (text) => {
     const fontStyle = /^\(.*\)$/.test(text) ? 'italic ' : '';
-    
-    return `${fontStyle}82px "${lyricsSettings.lyricsFontFace}", sans-serif`;
+
+    return `${fontStyle}${lyricsSettings.lyricsLineFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`;
 };
 
 export const lyricsRenderTextLine = (drawContext, { text, x, y, color, alpha = 1 }) => {

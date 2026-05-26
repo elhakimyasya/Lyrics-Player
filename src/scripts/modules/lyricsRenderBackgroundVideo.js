@@ -1,7 +1,7 @@
 import { lyricsSettings } from './lyricsSettings';
 
 export const lyricsEnsureBackgroundVideoPlaying = () => {
-    if (lyricsSettings.lyricsResourceBackground?.type !== 'video') {
+    if (lyricsSettings.lyricsResourceBackground?.type !== lyricsSettings.lyricsMediaTypes.video) {
         return;
     }
 

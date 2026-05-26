@@ -4,11 +4,13 @@ export const lyricsGetAudioState = (audioElement) => {
 
         const handleCanPlay = () => {
             cleanupListeners();
+
             resolve();
         };
 
         const handleError = () => {
             cleanupListeners();
+
             reject(new Error('Audio resource failed to load.'));
         };
 

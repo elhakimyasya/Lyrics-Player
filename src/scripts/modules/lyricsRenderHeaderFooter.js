@@ -1,11 +1,31 @@
-import { lyricsSettings } from "./lyricsSettings";
+import { lyricsSettings } from './lyricsSettings';
 
-/**
- * Merender teks header atau footer dengan fade yang halus.
- * Gerakan alpha mengikuti kondisi global dan crossfade antar baris.
- */
+const getLoopingLineState = (textLines, currentTimeMs, options) => {
+    const currentTimeSeconds = currentTimeMs / 1000;
+    const lineDurationSeconds = options.lineDuration || 6;
+    const fadeDurationSeconds = Math.min(options.fadeDuration || 1, lineDurationSeconds / 2);
+    const currentLineIndex = Math.floor(currentTimeSeconds / lineDurationSeconds) % textLines.length;
+    const timeWithinCycle = currentTimeSeconds % lineDurationSeconds;
+
+    let lineAlpha = 1;
+    if (timeWithinCycle < fadeDurationSeconds) {
+        lineAlpha = timeWithinCycle / fadeDurationSeconds;
+    } else if (timeWithinCycle > lineDurationSeconds - fadeDurationSeconds) {
+        lineAlpha = (lineDurationSeconds - timeWithinCycle) / fadeDurationSeconds;
+    }
+
+    return {
+        lineIndex: currentLineIndex,
+        alpha: Math.max(0, Math.min(1, lineAlpha)),
+    };
+};
+
+const colorForLine = (lineIndex) => (lineIndex % 2 === 0 ? lyricsSettings.lyricsKeyColor : lyricsSettings.lyricsNonActiveTextColor);
+
 export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, options) => {
-    if (!textLines || !textLines.length) return;
+    if (!textLines || !textLines.length) {
+        return;
+    }
 
     drawContext.font = options.font;
     drawContext.textAlign = 'center';
@@ -20,38 +40,15 @@ export const lyricsRenderHeaderFooter = (drawContext, textLines, currentTimeMs, 
         drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
         drawContext.fillText(textLines[0], options.x, options.y);
         drawContext.restore();
+
         return;
     }
 
-    const currentTimeSeconds = currentTimeMs / 1000;
-    const lineDurationSeconds = options.lineDuration || 6;
-    const fadeDurationSeconds = 1.0;
-    const totalLines = textLines.length;
-    const currentLineIndex = Math.floor(currentTimeSeconds / lineDurationSeconds) % totalLines;
-    const nextLineIndex = (currentLineIndex + 1) % totalLines;
-    const timeWithinCycle = currentTimeSeconds % lineDurationSeconds;
-    const fadeStart = Math.max(0, lineDurationSeconds - fadeDurationSeconds);
-
-    const transitionProgress = timeWithinCycle >= fadeStart
-        ? Math.max(0, Math.min(1, (timeWithinCycle - fadeStart) / fadeDurationSeconds))
-        : 0;
-
-    const currentAlpha = 1 - transitionProgress;
-    const nextAlpha = transitionProgress;
-
-    const colorForLine = (lineIndex) => (lineIndex % 2 === 0)
-        ? lyricsSettings.lyricsKeyColor
-        : lyricsSettings.lyricsNonActiveTextColor;
+    const { lineIndex, alpha } = getLoopingLineState(textLines, currentTimeMs, options);
 
     drawContext.save();
-
-    drawContext.globalAlpha = currentAlpha * maxOpacity * baseAlpha;
-    drawContext.fillStyle = colorForLine(currentLineIndex);
-    drawContext.fillText(textLines[currentLineIndex], options.x, options.y);
-
-    drawContext.globalAlpha = nextAlpha * maxOpacity * baseAlpha;
-    drawContext.fillStyle = colorForLine(nextLineIndex);
-    drawContext.fillText(textLines[nextLineIndex], options.x, options.y);
-
+    drawContext.globalAlpha = alpha * maxOpacity * baseAlpha;
+    drawContext.fillStyle = colorForLine(lineIndex);
+    drawContext.fillText(textLines[lineIndex], options.x, options.y);
     drawContext.restore();
 };

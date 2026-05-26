@@ -42,13 +42,13 @@ export const lyricsSettings = {
     lyricsExportFileName: 'lyrics-export',
     lyricsHeaderFirstRender: true,
     lyricsBackgroundCurrentOpacity: 0.9, // Nilai awal (default gelap/10%)
-    lyricsFadeSpeed: 0.02, // Kecepatan fade (semakin kecil semakin lambat/halus)
+    lyricsFadeSpeed: 0.01, // Kecepatan fade (semakin kecil semakin lambat/halus)
     lyricsBgColor: localStorage.getItem('lyricsBgColor') || '#000000',
     lyricsKeyColor: localStorage.getItem('lyricsKeyColor') || '#ffde59',
     lyricsNonActiveTextColor: localStorage.getItem('lyricsNonActiveTextColor') || '#ffffff',
     lyricsPersistenceKeys: {
         audio: 'persistent_audio_file',
         background: 'persistent_bg_file',
-        bgType: 'persistent_bg_type'
-    }
+        bgType: 'persistent_bg_type',
+    },
 };

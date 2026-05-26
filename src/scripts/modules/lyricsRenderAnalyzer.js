@@ -1,4 +1,4 @@
-import { lyricsSettings } from "./lyricsSettings";
+import { lyricsSettings } from './lyricsSettings';
 
 export const lyricsRenderAnalyzer = (audioElement) => {
     if (!lyricsSettings.lyricsAudioContext) {
@@ -6,7 +6,6 @@ export const lyricsRenderAnalyzer = (audioElement) => {
         lyricsSettings.lyricsAudioAnalyser = lyricsSettings.lyricsAudioContext.createAnalyser();
         lyricsSettings.lyricsAudioAnalyser.fftSize = 1024;
         lyricsSettings.lyricsAudioAnalyser.smoothingTimeConstant = 0.1;
-
         lyricsSettings.lyricsAudioSource = lyricsSettings.lyricsAudioContext.createMediaElementSource(audioElement);
 
         const audioBassFilter = lyricsSettings.lyricsAudioContext.createBiquadFilter();
@@ -16,7 +15,6 @@ export const lyricsRenderAnalyzer = (audioElement) => {
 
         const audioGainNode = lyricsSettings.lyricsAudioContext.createGain();
         audioGainNode.gain.value = 1.0;
-
         lyricsSettings.lyricsAudioSource.connect(audioBassFilter);
         audioBassFilter.connect(lyricsSettings.lyricsAudioAnalyser);
         lyricsSettings.lyricsAudioAnalyser.connect(audioGainNode);

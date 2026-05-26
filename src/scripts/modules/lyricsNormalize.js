@@ -9,15 +9,42 @@ export const lyricsNormalize = (lyricsRawText) => {
     lyricsProcessed = lyricsProcessed.replace(/[\u200B-\u200D\uFEFF\u2060-\u206F]/g, '');
 
     const lyricsConfusableMap = {
-        "е": "e", "Е": "E", "о": "o", "О": "O", "ӏ": "l", "І": "I", "ı": "i", "ѕ": "s",
-        "ᴀ": "A", "ʙ": "B", "ᴄ": "C", "ᴇ": "E", "ɢ": "G", "ʜ": "H", "ɪ": "I", "ᴊ": "J",
-        "ᴋ": "K", "ʟ": "L", "ᴍ": "M", "ɴ": "N", "ᴏ": "O", "ᴘ": "P", "ʀ": "R", "ᴛ": "T",
-        "ᴜ": "U", "ᴡ": "W", "ʏ": "Y", "ᴢ": "Z", "∕": "/", "꞉": ":"
+        е: 'e',
+        Е: 'E',
+        о: 'o',
+        О: 'O',
+        ӏ: 'l',
+        І: 'I',
+        ı: 'i',
+        ѕ: 's',
+        ᴀ: 'A',
+        ʙ: 'B',
+        ᴄ: 'C',
+        ᴇ: 'E',
+        ɢ: 'G',
+        ʜ: 'H',
+        ɪ: 'I',
+        ᴊ: 'J',
+        ᴋ: 'K',
+        ʟ: 'L',
+        ᴍ: 'M',
+        ɴ: 'N',
+        ᴏ: 'O',
+        ᴘ: 'P',
+        ʀ: 'R',
+        ᴛ: 'T',
+        ᴜ: 'U',
+        ᴡ: 'W',
+        ʏ: 'Y',
+        ᴢ: 'Z',
+        '∕': '/',
+        '꞉': ':',
     };
 
-    lyricsProcessed = lyricsProcessed.replace(/./g, char => lyricsConfusableMap[char] || char);
+    lyricsProcessed = lyricsProcessed.replace(/./g, (char) => lyricsConfusableMap[char] || char);
 
-    return lyricsProcessed.split(/\r?\n/)
-        .map(line => line.replace(/ +/g, ' ').trim())
+    return lyricsProcessed
+        .split(/\r?\n/)
+        .map((line) => line.replace(/ +/g, ' ').trim())
         .join('\n');
 };

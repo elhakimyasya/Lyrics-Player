@@ -1,4 +1,4 @@
-import { lyricsSettings } from "./lyricsSettings";
+import { lyricsSettings } from './lyricsSettings';
 
 /**
  * Mengonversi HEX ke RGBA string
@@ -17,27 +17,31 @@ let isMouseOver = false;
 
 const setupMouseTracking = (canvasElement) => {
     if (!canvasElement || canvasElement._mouseTrackingSetup) return;
-    
+
     canvasElement.addEventListener('mousemove', (e) => {
         const rect = canvasElement.getBoundingClientRect();
         mouseX = (e.clientX - rect.left) / rect.width;
         mouseY = (e.clientY - rect.top) / rect.height;
         isMouseOver = true;
     });
-    
+
     canvasElement.addEventListener('mouseleave', () => {
         isMouseOver = false;
     });
-    
+
     canvasElement._mouseTrackingSetup = true;
 };
 
 export const lyricsRenderSpectrum = (drawContext) => {
-    if (!lyricsSettings.lyricsAudioAnalyser || !lyricsSettings.lyricsAudioFrequencyData) return;
+    if (!lyricsSettings.lyricsAudioAnalyser || !lyricsSettings.lyricsAudioFrequencyData) {
+        return;
+    }
 
     // Setup mouse tracking on canvas
     const canvasElement = document.querySelector(lyricsSettings.elementSelectorCanvas);
-    if (canvasElement) setupMouseTracking(canvasElement);
+    if (canvasElement) {
+        setupMouseTracking(canvasElement);
+    }
 
     // Ambil Key Color terbaru dari settings
     const keyColor = lyricsSettings.lyricsKeyColor || '#ffde59';
@@ -63,18 +67,24 @@ export const lyricsRenderSpectrum = (drawContext) => {
         let frequencyMaxValue = 0;
         for (let binIndex = 0; binIndex < spectrumBinSize; binIndex++) {
             const frequencyValue = lyricsSettings.lyricsAudioFrequencyData[index * spectrumBinSize + binIndex];
-            if (frequencyValue > frequencyMaxValue) frequencyMaxValue = frequencyValue;
+            if (frequencyValue > frequencyMaxValue) {
+                frequencyMaxValue = frequencyValue;
+            }
         }
 
-        if (frequencyMaxValue < spectrumThreshold) frequencyMaxValue = 0;
+        if (frequencyMaxValue < spectrumThreshold) {
+            frequencyMaxValue = 0;
+        }
 
         // Interactive mouse effect: boost bars near mouse X position
         let interactiveBoost = 1.0;
         if (isMouseOver) {
-            const barCenterX = (index / spectrumBarsCount);
+            const barCenterX = index / spectrumBarsCount;
             const distance = Math.abs(barCenterX - mouseX);
-            interactiveBoost = 1 + (1 - distance) * 0.3; // Max 30% boost near mouse
+            // Max 30% boost near mouse
+            interactiveBoost = 1 + (1 - distance) * 0.3;
         }
+
         frequencyMaxValue = Math.min(255, frequencyMaxValue * interactiveBoost);
 
         const spectrumScale = 1 - (index / (spectrumBarsCount - 1)) * 0.98;
@@ -86,7 +96,7 @@ export const lyricsRenderSpectrum = (drawContext) => {
         drawContext.fillRect(drawXLeft, drawY, spectrumBarWidth - spectrumBarGap, spectrumBarHeight);
 
         // Draw Right Side (Mirrored)
-        const drawXRight = (lyricsSettings.lyricsPreviewWidth / 2) + (spectrumBarsCount - index - 1) * spectrumBarWidth;
+        const drawXRight = lyricsSettings.lyricsPreviewWidth / 2 + (spectrumBarsCount - index - 1) * spectrumBarWidth;
         drawContext.fillRect(drawXRight, drawY, spectrumBarWidth - spectrumBarGap, spectrumBarHeight);
     }
 };

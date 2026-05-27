@@ -15,7 +15,7 @@ const createRecordingAudioStream = (audioElement) => {
     const audioContext = lyricsSettings.lyricsAudioContext || new (window.AudioContext || window.webkitAudioContext)();
     const source = lyricsSettings.lyricsAudioSource || audioContext.createMediaElementSource(audioElement);
     const destination = audioContext.createMediaStreamDestination();
-    
+
     source.connect(destination);
 
     return {
@@ -31,7 +31,8 @@ const createRecordingAudioStream = (audioElement) => {
 };
 
 export const lyricsCreateRecordingStream = (canvasElement, audioElement) => {
-    const videoStream = canvasElement.captureStream(lyricsSettings.lyricsFramesPerSecond);
+    const videoStream = canvasElement.captureStream(lyricsSettings.lyricsRecordingManualCaptureFrameRate);
+    const [videoTrack] = videoStream.getVideoTracks();
     const audioStream = createRecordingAudioStream(audioElement);
     const combinedStream = new MediaStream();
 
@@ -40,6 +41,11 @@ export const lyricsCreateRecordingStream = (canvasElement, audioElement) => {
 
     return {
         stream: combinedStream,
+        requestVideoFrame: () => {
+            if (videoTrack && typeof videoTrack.requestFrame === 'function') {
+                videoTrack.requestFrame();
+            }
+        },
         cleanup: () => {
             combinedStream.getTracks().forEach((track) => track.stop());
             audioStream.cleanup();

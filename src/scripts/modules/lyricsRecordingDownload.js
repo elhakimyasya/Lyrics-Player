@@ -1,7 +1,10 @@
 import { lyricsSettings } from './lyricsSettings';
 
 export const lyricsDownloadRecording = (recordingChunks) => {
-    const finalBlob = new Blob(recordingChunks, { type: lyricsSettings.lyricsRecordingMimeType });
+    const finalBlob = new Blob(recordingChunks, {
+        type: lyricsSettings.lyricsRecordingMimeType,
+    });
+
     const downloadUrl = URL.createObjectURL(finalBlob);
     const hiddenLink = document.createElement('a');
 
@@ -9,5 +12,5 @@ export const lyricsDownloadRecording = (recordingChunks) => {
     hiddenLink.download = `${lyricsSettings.lyricsExportFileName}.${lyricsSettings.lyricsRecordingFileExtension}`;
     hiddenLink.click();
 
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), lyricsSettings.lyricsRecordingObjectUrlRevokeDelayMs);
 };

@@ -30,12 +30,12 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
         const mediaRecorder = lyricsCreateMediaRecorder(recordingStream.stream);
         const recordingChunks = [];
 
-        let recordingFrameId = null;
+        let recordingFrameTimeoutId = null;
 
         const finishRecording = () => {
-            if (recordingFrameId) {
-                cancelAnimationFrame(recordingFrameId);
-                recordingFrameId = null;
+            if (recordingFrameTimeoutId) {
+                clearTimeout(recordingFrameTimeoutId);
+                recordingFrameTimeoutId = null;
             }
 
             lyricsDownloadRecording(recordingChunks);
@@ -61,21 +61,25 @@ export const lyricsStartRecording = async ({ audioElement, buttonElement }) => {
 
         mediaRecorder.onstop = finishRecording;
 
+        const frameIntervalMs = lyricsSettings.lyricsMillisecondsPerSecond / lyricsSettings.lyricsFramesPerSecond;
+
         const renderExportFrame = () => {
             if (!lyricsSettings.lyricsStateIsRecording) {
                 return;
             }
 
             lyricsRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, exportContext);
+            recordingStream.requestVideoFrame();
 
             if (audioElement.ended || audioElement.currentTime >= audioElement.duration - lyricsSettings.lyricsRecordingStopOffsetSeconds) {
+                mediaRecorder.requestData();
                 mediaRecorder.stop();
                 audioElement.pause();
 
                 return;
             }
 
-            recordingFrameId = requestAnimationFrame(renderExportFrame);
+            recordingFrameTimeoutId = setTimeout(renderExportFrame, frameIntervalMs);
         };
 
         mediaRecorder.start(lyricsSettings.lyricsRecordingChunkIntervalMs);

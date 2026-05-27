@@ -123,6 +123,8 @@ export const lyricsSettings = {
     },
     lyricsRecordingMissingAudioMessage: 'Silakan masukkan file audio terlebih dahulu.',
     lyricsRecordingChunkIntervalMs: 1000,
+    lyricsRecordingManualCaptureFrameRate: 0,
+    lyricsRecordingObjectUrlRevokeDelayMs: 60000,
     lyricsRecordingStopOffsetSeconds: 0.05,
 
     // Background Render Config

@@ -36,6 +36,23 @@ export const lyricsCreateRecordingStream = (canvasElement, audioElement) => {
     const audioStream = createRecordingAudioStream(audioElement);
     const combinedStream = new MediaStream();
 
+    if (videoTrack) {
+        videoTrack.contentHint = 'motion';
+
+        if (typeof videoTrack.applyConstraints === 'function') {
+            videoTrack
+                .applyConstraints({
+                    frameRate: {
+                        ideal: lyricsSettings.lyricsFramesPerSecond,
+                        max: lyricsSettings.lyricsFramesPerSecond,
+                    },
+                })
+                .catch((error) => {
+                    console.warn('Failed to apply recording video constraints:', error);
+                });
+        }
+    }
+
     addTrackList(combinedStream, videoStream.getVideoTracks());
     addTrackList(combinedStream, audioStream.stream.getAudioTracks());
 

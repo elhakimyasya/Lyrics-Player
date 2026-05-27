@@ -115,8 +115,14 @@ export const lyricsSettings = {
 
     // Recording Config
     lyricsRecordingMimeType: 'video/webm',
-    lyricsRecordingMimeTypeWithCodecs: 'video/webm;codecs=vp9,opus',
+    lyricsRecordingMimeTypesWithCodecs: [
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+    ],
     lyricsRecordingFileExtension: 'webm',
+    lyricsRecordingVideoBitsPerSecond: 12000000,
+    lyricsRecordingAudioBitsPerSecond: 192000,
     lyricsRecordingButtonText: {
         idle: 'RECORD',
         active: 'RECORDING...',

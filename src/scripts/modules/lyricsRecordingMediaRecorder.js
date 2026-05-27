@@ -1,11 +1,17 @@
 import { lyricsSettings } from './lyricsSettings';
 
+const getSupportedMimeType = () => lyricsSettings.lyricsRecordingMimeTypesWithCodecs.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+
 export const lyricsCreateMediaRecorder = (stream) => {
+    const supportedMimeType = getSupportedMimeType();
     const recorderOptions = {
-        mimeType: lyricsSettings.lyricsRecordingMimeTypeWithCodecs,
+        videoBitsPerSecond: lyricsSettings.lyricsRecordingVideoBitsPerSecond,
+        audioBitsPerSecond: lyricsSettings.lyricsRecordingAudioBitsPerSecond,
     };
 
-    const supportedOptions = MediaRecorder.isTypeSupported(recorderOptions.mimeType) ? recorderOptions : {};
+    if (supportedMimeType) {
+        recorderOptions.mimeType = supportedMimeType;
+    }
 
-    return new MediaRecorder(stream, supportedOptions);
+    return new MediaRecorder(stream, recorderOptions);
 };

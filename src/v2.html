@@ -305,10 +305,10 @@
                             <button onclick="undoTiming()" class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xs text-zinc-300 transition hover:bg-zinc-800" title="Undo Timing (Ctrl+Z)">
                                 <i class="fa-solid fa-rotate-left"></i>
                             </button>
-                                <button onclick="prevToken()" class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xs text-zinc-300 transition hover:bg-zinc-800" title="Previous Word">
+                            <button onclick="prevToken()" class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xs text-zinc-300 transition hover:bg-zinc-800" title="Previous Word">
                                 <i class="fa-solid fa-backward-step"></i>
                             </button>
-                                <button onclick="nextToken()" class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xs text-zinc-300 transition hover:bg-zinc-800" title="Next Word">
+                            <button onclick="nextToken()" class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xs text-zinc-300 transition hover:bg-zinc-800" title="Next Word">
                                 <i class="fa-solid fa-forward-step"></i>
                             </button>
                             <button onclick="confirmResetTimings()" class="ml-1 rounded border border-red-800/50 bg-red-950/40 px-2 py-1 text-xs font-semibold text-red-300 transition hover:bg-red-900/60">Reset Timing</button>
@@ -1397,7 +1397,13 @@ Bersama bayangmu dalam mimpi
 
                 const colorToRgba = (color, alpha) => {
                     const hex = color.replace('#', '');
-                    const normalized = hex.length === 3 ? hex.split('').map((value) => value + value).join('') : hex;
+                    const normalized =
+                        hex.length === 3
+                            ? hex
+                                  .split('')
+                                  .map((value) => value + value)
+                                  .join('')
+                            : hex;
                     const red = parseInt(normalized.slice(0, 2), 16);
                     const green = parseInt(normalized.slice(2, 4), 16);
                     const blue = parseInt(normalized.slice(4, 6), 16);
@@ -1446,11 +1452,15 @@ Bersama bayangmu dalam mimpi
                 const headerFontSize = 48;
                 const footerFontSize = 32;
                 const overlayVisibility = bgMediaLoaded ? Math.max(0, Math.min(1, 1 - backgroundFadeAlpha)) : 1;
+
+                const baseOpacity = 0.6;
+
                 stageCtx.save();
                 stageCtx.textAlign = 'center';
 
+                // --- HEADER ---
                 if (hLines.length === 1) {
-                    stageCtx.globalAlpha = overlayVisibility;
+                    stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
                     stageCtx.fillStyle = stageStyles.text;
                     stageCtx.font = `700 ${headerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(hLines[0], width / 2, 154);
@@ -1464,14 +1474,17 @@ Bersama bayangmu dalam mimpi
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
-                    stageCtx.globalAlpha = Math.max(0, Math.min(1, fadeAlpha * overlayVisibility));
+                    // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
+                    stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
                     stageCtx.fillStyle = stageStyles.text;
                     stageCtx.font = `700 ${headerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(hLines[cycleIdx], width / 2, 154);
                 }
 
+                // --- FOOTER ---
                 if (fLines.length === 1) {
-                    stageCtx.globalAlpha = overlayVisibility;
+                    // Mengalikan 0.7 dengan overlayVisibility
+                    stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
                     stageCtx.fillStyle = stageStyles.fill;
                     stageCtx.font = `700 ${footerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(fLines[0], width / 2, height - 132);
@@ -1485,7 +1498,8 @@ Bersama bayangmu dalam mimpi
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
-                    stageCtx.globalAlpha = Math.max(0, Math.min(1, fadeAlpha * overlayVisibility));
+                    // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
+                    stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
                     stageCtx.fillStyle = stageStyles.fill;
                     stageCtx.font = `700 ${footerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(fLines[cycleIdx], width / 2, height - 132);
@@ -1493,7 +1507,6 @@ Bersama bayangmu dalam mimpi
 
                 stageCtx.restore();
             }
-
             function renderEditModeKaraokeLyrics(width, height, curTime, activeLineIdx) {
                 const surroundingLines = [activeLineIdx - 1, activeLineIdx, activeLineIdx + 1].filter((idx) => idx >= 0 && idx < linesData.length);
 
@@ -1740,7 +1753,7 @@ Bersama bayangmu dalam mimpi
             }
 
             function confirmResetTimings() {
-                    openConfirmModal('Reset Timing', 'Are you sure you want to reset all timestamps?', () => {
+                openConfirmModal('Reset Timing', 'Are you sure you want to reset all timestamps?', () => {
                     pushUndoState();
                     tokens.forEach((t) => {
                         t.start = null;
@@ -1937,7 +1950,12 @@ Bersama bayangmu dalam mimpi
 
             function getAudioBaseName() {
                 const audioName = audioFileMeta && audioFileMeta.name ? audioFileMeta.name : 'karaoke';
-                return audioName.replace(/\.[^/.]+$/, '').replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || 'karaoke';
+                return (
+                    audioName
+                        .replace(/\.[^/.]+$/, '')
+                        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+                        .trim() || 'karaoke'
+                );
             }
 
             function onTimelineBlockMouseDown(e, tokenIdx, mode) {

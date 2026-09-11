@@ -463,6 +463,71 @@ Bersama bayangmu dalam mimpi
                 startSmoothAnimationLoop();
             });
 
+            function normalizeText(text) {
+    if (!text) return '';
+
+    return text
+        .normalize('NFC')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function parseItalicParts(text) {
+    const normalized = normalizeText(text);
+    const parts = [];
+    const regex = /\(([^()]*)\)/g;
+
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(normalized)) !== null) {
+
+        // Teks sebelum (...)
+        if (match.index > lastIndex) {
+            parts.push({
+                text: normalized.substring(lastIndex, match.index),
+                italic: false
+            });
+        }
+
+        // Kurung buka tetap tampil, normal
+        parts.push({
+            text: '(',
+            italic: false
+        });
+
+        // Isi kurung menjadi italic
+        if (match[1]) {
+            parts.push({
+                text: match[1],
+                italic: true
+            });
+        }
+
+        // Kurung tutup tetap tampil, normal
+        parts.push({
+            text: ')',
+            italic: false
+        });
+
+        lastIndex = regex.lastIndex;
+    }
+
+    // Sisa teks setelah (...)
+    if (lastIndex < normalized.length) {
+        parts.push({
+            text: normalized.substring(lastIndex),
+            italic: false
+        });
+    }
+
+    return parts.length > 0
+        ? parts
+        : [{ text: normalized, italic: false }];
+}
+
+
             function showToast(msg, type = 'info') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -818,7 +883,7 @@ Bersama bayangmu dalam mimpi
                                     tokens.push({
                                         id: tokenCounter,
                                         lineIndex: currentLineIdx,
-                                        text: cleanText,
+                                        text: normalizeText(cleanText),
                                         start: parseFloat(wordStart.toFixed(3)),
                                         end: parseFloat(wordEnd.toFixed(3)),
                                     });
@@ -829,7 +894,7 @@ Bersama bayangmu dalam mimpi
                                 tokens.push({
                                     id: tokenCounter,
                                     lineIndex: currentLineIdx,
-                                    text: cleanText,
+                                    text: normalizeText(cleanText),
                                     start: parseFloat(cursorTime.toFixed(3)),
                                     end: parseFloat((cursorTime + 0.35).toFixed(3)),
                                 });
@@ -852,7 +917,7 @@ Bersama bayangmu dalam mimpi
                                 tokens.push({
                                     id: tokenCounter,
                                     lineIndex: currentLineIdx,
-                                    text: w,
+                                    text: normalizeText(w),
                                     start: parseFloat(wStart.toFixed(3)),
                                     end: parseFloat(wEnd.toFixed(3)),
                                 });
@@ -863,7 +928,7 @@ Bersama bayangmu dalam mimpi
                             tokens.push({
                                 id: tokenCounter,
                                 lineIndex: currentLineIdx,
-                                text: cleanText,
+                                text: normalizeText(cleanText),
                                 start: parseFloat(startSec.toFixed(3)),
                                 end: parseFloat(endSec.toFixed(3)),
                             });
@@ -910,7 +975,7 @@ Bersama bayangmu dalam mimpi
                             tokens.push({
                                 id: tokenCounter,
                                 lineIndex: currentLineIdx,
-                                text: w,
+                                text: normalizeText(w),
                                 start: parseFloat(wStart.toFixed(3)),
                                 end: parseFloat(wEnd.toFixed(3)),
                             });
@@ -921,7 +986,7 @@ Bersama bayangmu dalam mimpi
                         tokens.push({
                             id: tokenCounter,
                             lineIndex: currentLineIdx,
-                            text: textContent,
+                            text: normalizeText(textContent),
                             start: parseFloat(startSec.toFixed(3)),
                             end: parseFloat(endSec.toFixed(3)),
                         });
@@ -960,7 +1025,7 @@ Bersama bayangmu dalam mimpi
                         const mins = parseFloat(lrcMatch[1]);
                         const secs = parseFloat(lrcMatch[2]);
                         lineStartTime = mins * 60 + secs;
-                        textContent = lrcMatch[3].replace(/\u00A0/g, ' ').trim();
+                        textContent = normalizeText(lrcMatch[3]);
                     }
 
                     if (!textContent || textContent.length === 0) return;
@@ -995,7 +1060,7 @@ Bersama bayangmu dalam mimpi
                                 tokens.push({
                                     id: tokenCounter,
                                     lineIndex: currentLineIdx,
-                                    text: wObj.text,
+                                    text: normalizeText(wObj.text),
                                     start: parseFloat(wObj.start.toFixed(3)),
                                     end: parseFloat(wObj.end.toFixed(3)),
                                 });
@@ -1012,7 +1077,7 @@ Bersama bayangmu dalam mimpi
                             tokens.push({
                                 id: tokenCounter,
                                 lineIndex: currentLineIdx,
-                                text: w,
+                                text: normalizeText(w),
                                 start: wordStart,
                                 end: wordEnd,
                             });
@@ -1023,7 +1088,7 @@ Bersama bayangmu dalam mimpi
                         tokens.push({
                             id: tokenCounter,
                             lineIndex: currentLineIdx,
-                            text: textContent,
+                            text: normalizeText(textContent),
                             start: lineStartTime,
                             end: lineStartTime !== null ? lineStartTime + 2.5 : null,
                         });
@@ -1578,84 +1643,192 @@ Bersama bayangmu dalam mimpi
                 });
             }
 
-            function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
-                if (lineIdx < 0 || lineIdx >= linesData.length) return;
+function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
+    if (lineIdx < 0 || lineIdx >= linesData.length) return;
 
-                const tokenIndices = linesData[lineIdx];
-                if (!tokenIndices || tokenIndices.length === 0) return;
+    const tokenIndices = linesData[lineIdx];
+    if (!tokenIndices || tokenIndices.length === 0) return;
 
-                const width = stageCanvas.width;
-                const scaleFactor = 1;
-                const fontSize = stageStyles.fontSize || 48;
+    const width = stageCanvas.width;
+    const scaleFactor = 1;
+    const fontSize = stageStyles.fontSize || 48;
+    const fontFamily = stageStyles.fontFamily;
 
-                stageCtx.save();
-                stageCtx.font = `900 ${fontSize}px ${stageStyles.fontFamily}`;
+    stageCtx.save();
 
-                let totalLineWidth = 0;
-                const wordDataList = tokenIndices
-                    .map((tIdx) => {
-                        const tok = tokens[tIdx];
-                        if (!tok) return null;
-                        const cleanText = tok.text.replace(/♪/g, '').trim();
-                        if (!cleanText) return null;
+    /*
+     * Hitung seluruh lebar line terlebih dahulu.
+     * Setiap bagian (...) dihitung dengan font italic
+     * hanya pada isi kurung.
+     */
+    const wordDataList = tokenIndices
+        .map((tIdx) => {
+            const tok = tokens[tIdx];
+            if (!tok) return null;
 
-                        const metrics = stageCtx.measureText(cleanText + ' ');
-                        const w = metrics.width;
-                        totalLineWidth += w;
-                        return { tIdx, tok, text: cleanText, w };
-                    })
-                    .filter(Boolean);
+            const cleanText = tok.text.replace(/♪/g, '').trim();
+            if (!cleanText) return null;
 
-                if (wordDataList.length === 0) {
-                    stageCtx.restore();
-                    return;
-                }
+            const text = normalizeText(cleanText);
+            const parts = parseItalicParts(text);
 
-                let startX = (width - totalLineWidth) / 2;
+            let totalWidth = 0;
 
-                wordDataList.forEach((item) => {
-                    const { tIdx, tok, text, w } = item;
+            parts.forEach((part) => {
+                stageCtx.font = `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+                totalWidth += stageCtx.measureText(part.text).width;
+            });
 
-                    let fillPct = 0;
-                    if (!isPreviewMode) {
-                        if (tIdx < currentTokenIndex) fillPct = 100;
-                        else if (tIdx === currentTokenIndex && isRecordingSpacePressed) fillPct = 100;
-                    } else {
-                        if (tok.start !== null) {
-                            if (curTime < tok.start) fillPct = 0;
-                            else if (tok.end !== null && curTime >= tok.end) fillPct = 100;
-                            else if (tok.end !== null && curTime >= tok.start && curTime < tok.end) {
-                                fillPct = ((curTime - tok.start) / (tok.end - tok.start)) * 100;
-                            } else if (curTime >= tok.start && tok.end === null) fillPct = 100;
-                        }
-                    }
-                    fillPct = Math.max(0, Math.min(100, fillPct));
+            // Tambahkan spasi antar token
+            stageCtx.font = `900 ${fontSize}px ${fontFamily}`;
+            totalWidth += stageCtx.measureText(' ').width;
 
-                    stageCtx.lineWidth = 8 * scaleFactor;
+            return {
+                tIdx,
+                tok,
+                text,
+                parts,
+                w: totalWidth
+            };
+        })
+        .filter(Boolean);
 
-                    stageCtx.fillStyle = stageStyles.text || '#ffffff';
-                    stageCtx.fillText(text, startX, yPos);
+    if (wordDataList.length === 0) {
+        stageCtx.restore();
+        return;
+    }
 
-                    if (fillPct > 0) {
-                        stageCtx.save();
-                        stageCtx.beginPath();
-                        stageCtx.rect(startX, yPos - 100 * scaleFactor, (w * fillPct) / 100, 180 * scaleFactor);
-                        stageCtx.clip();
+    const totalLineWidth = wordDataList.reduce(
+        (sum, item) => sum + item.w,
+        0
+    );
 
-                        stageCtx.lineWidth = 8 * scaleFactor;
-                        stageCtx.strokeStyle = '#000000';
-                        stageCtx.strokeText(text, startX, yPos);
+    let startX = (width - totalLineWidth) / 2;
 
-                        stageCtx.fillStyle = stageStyles.fill || '#ffde59';
-                        stageCtx.fillText(text, startX, yPos);
-                        stageCtx.restore();
-                    }
+    wordDataList.forEach((item) => {
+        const { tIdx, tok, parts, w } = item;
 
-                    startX += w;
-                });
+        let fillPct = 0;
 
-                stageCtx.restore();
+        if (!isPreviewMode) {
+            if (tIdx < currentTokenIndex) {
+                fillPct = 100;
+            } else if (
+                tIdx === currentTokenIndex &&
+                isRecordingSpacePressed
+            ) {
+                fillPct = 100;
             }
+        } else {
+            if (tok.start !== null) {
+                if (curTime < tok.start) {
+                    fillPct = 0;
+                } else if (
+                    tok.end !== null &&
+                    curTime >= tok.end
+                ) {
+                    fillPct = 100;
+                } else if (
+                    tok.end !== null &&
+                    curTime >= tok.start &&
+                    curTime < tok.end
+                ) {
+                    fillPct =
+                        ((curTime - tok.start) /
+                        (tok.end - tok.start)) * 100;
+                } else if (
+                    curTime >= tok.start &&
+                    tok.end === null
+                ) {
+                    fillPct = 100;
+                }
+            }
+        }
+
+        fillPct = Math.max(0, Math.min(100, fillPct));
+
+        /*
+         * ---------------------------------------------
+         * 1. DRAW TEXT NORMAL + ITALIC
+         * ---------------------------------------------
+         */
+
+        let segmentX = startX;
+
+        parts.forEach((part) => {
+            stageCtx.font =
+                `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+
+            stageCtx.fillStyle =
+                stageStyles.text || '#ffffff';
+
+            stageCtx.fillText(
+                part.text,
+                segmentX,
+                yPos
+            );
+
+            segmentX += stageCtx.measureText(part.text).width;
+        });
+
+        /*
+         * ---------------------------------------------
+         * 2. KARAOKE FILL
+         * ---------------------------------------------
+         *
+         * Clip berdasarkan total lebar token,
+         * tetapi masing-masing bagian tetap menggunakan
+         * font normal / italic sesuai markup.
+         */
+
+        if (fillPct > 0) {
+            stageCtx.save();
+
+            stageCtx.beginPath();
+            stageCtx.rect(
+                startX,
+                yPos - 100 * scaleFactor,
+                (w * fillPct) / 100,
+                180 * scaleFactor
+            );
+            stageCtx.clip();
+
+            segmentX = startX;
+
+            parts.forEach((part) => {
+                stageCtx.font =
+                    `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+
+                stageCtx.lineWidth = 8 * scaleFactor;
+
+                stageCtx.strokeStyle = '#000000';
+
+                stageCtx.strokeText(
+                    part.text,
+                    segmentX,
+                    yPos
+                );
+
+                stageCtx.fillStyle =
+                    stageStyles.fill || '#ffde59';
+
+                stageCtx.fillText(
+                    part.text,
+                    segmentX,
+                    yPos
+                );
+
+                segmentX += stageCtx.measureText(part.text).width;
+            });
+
+            stageCtx.restore();
+        }
+
+        startX += w;
+    });
+
+    stageCtx.restore();
+}
 
             function setupAudioEvents() {
                 audio.ontimeupdate = () => {

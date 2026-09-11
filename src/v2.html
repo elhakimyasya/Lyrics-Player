@@ -483,7 +483,7 @@ function parseItalicParts(text) {
 
     while ((match = regex.exec(normalized)) !== null) {
 
-        // Teks sebelum (...)
+        // Teks sebelum kurung
         if (match.index > lastIndex) {
             parts.push({
                 text: normalized.substring(lastIndex, match.index),
@@ -491,13 +491,13 @@ function parseItalicParts(text) {
             });
         }
 
-        // Kurung buka tetap tampil, normal
+        // KURUNG BUKA tetap ditampilkan
         parts.push({
             text: '(',
             italic: false
         });
 
-        // Isi kurung menjadi italic
+        // ISI KURUNG = ITALIC
         if (match[1]) {
             parts.push({
                 text: match[1],
@@ -505,7 +505,7 @@ function parseItalicParts(text) {
             });
         }
 
-        // Kurung tutup tetap tampil, normal
+        // KURUNG TUTUP tetap ditampilkan
         parts.push({
             text: ')',
             italic: false
@@ -514,7 +514,7 @@ function parseItalicParts(text) {
         lastIndex = regex.lastIndex;
     }
 
-    // Sisa teks setelah (...)
+    // Teks setelah kurung
     if (lastIndex < normalized.length) {
         parts.push({
             text: normalized.substring(lastIndex),
@@ -524,9 +524,11 @@ function parseItalicParts(text) {
 
     return parts.length > 0
         ? parts
-        : [{ text: normalized, italic: false }];
+        : [{
+            text: normalized,
+            italic: false
+        }];
 }
-
 
             function showToast(msg, type = 'info') {
                 const container = document.getElementById('toast-container');
@@ -1657,38 +1659,63 @@ function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
     stageCtx.save();
 
     /*
-     * Hitung seluruh lebar line terlebih dahulu.
-     * Setiap bagian (...) dihitung dengan font italic
-     * hanya pada isi kurung.
+     * =====================================================
+     * BUILD WORD DATA
+     * =====================================================
+     *
+     * Contoh:
+     * "Aku (HO-HO-HO) ini"
+     *
+     * akan menjadi:
+     *
+     * Aku              normal
+     * (                normal
+     * HO-HO-HO         italic
+     * )                normal
+     * ini              normal
      */
+
     const wordDataList = tokenIndices
         .map((tIdx) => {
             const tok = tokens[tIdx];
+
             if (!tok) return null;
 
-            const cleanText = tok.text.replace(/♪/g, '').trim();
+            const cleanText = tok.text
+                .replace(/♪/g, '')
+                .trim();
+
             if (!cleanText) return null;
 
             const text = normalizeText(cleanText);
+
+            // Pecah bagian normal / italic
             const parts = parseItalicParts(text);
 
-            let totalWidth = 0;
+            let textWidth = 0;
 
             parts.forEach((part) => {
-                stageCtx.font = `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
-                totalWidth += stageCtx.measureText(part.text).width;
+                stageCtx.font =
+                    `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+
+                textWidth += stageCtx.measureText(part.text).width;
             });
 
-            // Tambahkan spasi antar token
-            stageCtx.font = `900 ${fontSize}px ${fontFamily}`;
-            totalWidth += stageCtx.measureText(' ').width;
+            // Spasi antar token
+            stageCtx.font =
+                `900 ${fontSize}px ${fontFamily}`;
+
+            const spaceWidth =
+                stageCtx.measureText(' ').width;
+
+            const w = textWidth + spaceWidth;
 
             return {
                 tIdx,
                 tok,
                 text,
                 parts,
-                w: totalWidth
+                w
             };
         })
         .filter(Boolean);
@@ -1698,64 +1725,108 @@ function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
         return;
     }
 
+    /*
+     * =====================================================
+     * CENTER LINE
+     * =====================================================
+     */
+
     const totalLineWidth = wordDataList.reduce(
         (sum, item) => sum + item.w,
         0
     );
 
-    let startX = (width - totalLineWidth) / 2;
+    let startX =
+        (width - totalLineWidth) / 2;
+
+    /*
+     * =====================================================
+     * DRAW EACH TOKEN
+     * =====================================================
+     */
 
     wordDataList.forEach((item) => {
-        const { tIdx, tok, parts, w } = item;
+
+        const {
+            tIdx,
+            tok,
+            parts,
+            w
+        } = item;
+
+        /*
+         * =================================================
+         * KARAOKE FILL %
+         * =================================================
+         */
 
         let fillPct = 0;
 
         if (!isPreviewMode) {
+
             if (tIdx < currentTokenIndex) {
+
                 fillPct = 100;
+
             } else if (
                 tIdx === currentTokenIndex &&
                 isRecordingSpacePressed
             ) {
+
                 fillPct = 100;
             }
+
         } else {
+
             if (tok.start !== null) {
+
                 if (curTime < tok.start) {
+
                     fillPct = 0;
+
                 } else if (
                     tok.end !== null &&
                     curTime >= tok.end
                 ) {
+
                     fillPct = 100;
+
                 } else if (
                     tok.end !== null &&
                     curTime >= tok.start &&
                     curTime < tok.end
                 ) {
+
                     fillPct =
                         ((curTime - tok.start) /
                         (tok.end - tok.start)) * 100;
+
                 } else if (
                     curTime >= tok.start &&
                     tok.end === null
                 ) {
+
                     fillPct = 100;
                 }
             }
         }
 
-        fillPct = Math.max(0, Math.min(100, fillPct));
+        fillPct =
+            Math.max(
+                0,
+                Math.min(100, fillPct)
+            );
 
         /*
-         * ---------------------------------------------
-         * 1. DRAW TEXT NORMAL + ITALIC
-         * ---------------------------------------------
+         * =================================================
+         * DRAW BASE TEXT
+         * =================================================
          */
 
         let segmentX = startX;
 
         parts.forEach((part) => {
+
             stageCtx.font =
                 `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
 
@@ -1768,40 +1839,43 @@ function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
                 yPos
             );
 
-            segmentX += stageCtx.measureText(part.text).width;
+            segmentX +=
+                stageCtx.measureText(part.text).width;
         });
 
         /*
-         * ---------------------------------------------
-         * 2. KARAOKE FILL
-         * ---------------------------------------------
-         *
-         * Clip berdasarkan total lebar token,
-         * tetapi masing-masing bagian tetap menggunakan
-         * font normal / italic sesuai markup.
+         * =================================================
+         * DRAW KARAOKE FILL
+         * =================================================
          */
 
         if (fillPct > 0) {
+
             stageCtx.save();
 
             stageCtx.beginPath();
+
             stageCtx.rect(
                 startX,
                 yPos - 100 * scaleFactor,
                 (w * fillPct) / 100,
                 180 * scaleFactor
             );
+
             stageCtx.clip();
 
             segmentX = startX;
 
             parts.forEach((part) => {
+
                 stageCtx.font =
                     `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
 
-                stageCtx.lineWidth = 8 * scaleFactor;
+                stageCtx.lineWidth =
+                    8 * scaleFactor;
 
-                stageCtx.strokeStyle = '#000000';
+                stageCtx.strokeStyle =
+                    '#000000';
 
                 stageCtx.strokeText(
                     part.text,
@@ -1818,12 +1892,16 @@ function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
                     yPos
                 );
 
-                segmentX += stageCtx.measureText(part.text).width;
+                segmentX +=
+                    stageCtx.measureText(part.text).width;
             });
 
             stageCtx.restore();
         }
 
+        /*
+         * Spacing antar token
+         */
         startX += w;
     });
 

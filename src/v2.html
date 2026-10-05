@@ -464,81 +464,91 @@ Bersama bayangmu dalam mimpi
             });
 
             function normalizeText(text) {
-    if (!text) return '';
+                if (!text) return '';
 
-    return text
-        .normalize('NFC')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
+                return text
+                    .normalize('NFC')
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
 
-function parseItalicParts(text) {
-    const normalized = normalizeText(text);
-    const parts = [];
-    const regex = /\(([^()]*)\)/g;
+            function parseItalicParts(text) {
+                const normalized = normalizeText(text);
+                const parts = [];
+                const regex = /\(([^()]*)\)/g;
 
-    let lastIndex = 0;
-    let match;
+                let lastIndex = 0;
+                let match;
 
-    while ((match = regex.exec(normalized)) !== null) {
+                while ((match = regex.exec(normalized)) !== null) {
+                    // Teks sebelum kurung
+                    if (match.index > lastIndex) {
+                        parts.push({
+                            text: normalized.substring(lastIndex, match.index),
+                            italic: false,
+                        });
+                    }
 
-        // Teks sebelum kurung
-        if (match.index > lastIndex) {
-            parts.push({
-                text: normalized.substring(lastIndex, match.index),
-                italic: false
-            });
-        }
+                    // SEMUA ISI KURUNG (termasuk kurung buka/tutup) = ITALIC
+                    if (match[1]) {
+                        parts.push({
+                            text: '(' + match[1] + ')',
+                            italic: true,
+                        });
+                    }
 
-        // KURUNG BUKA tetap ditampilkan
-        parts.push({
-            text: '(',
-            italic: false
-        });
+                    lastIndex = regex.lastIndex;
+                }
 
-        // ISI KURUNG = ITALIC
-        if (match[1]) {
-            parts.push({
-                text: match[1],
-                italic: true
-            });
-        }
+                // Teks setelah kurung
+                if (lastIndex < normalized.length) {
+                    parts.push({
+                        text: normalized.substring(lastIndex),
+                        italic: false,
+                    });
+                }
 
-        // KURUNG TUTUP tetap ditampilkan
-        parts.push({
-            text: ')',
-            italic: false
-        });
+                return parts.length > 0
+                    ? parts
+                    : [
+                          {
+                              text: normalized,
+                              italic: false,
+                          },
+                      ];
+            }
 
-        lastIndex = regex.lastIndex;
-    }
-
-    // Teks setelah kurung
-    if (lastIndex < normalized.length) {
-        parts.push({
-            text: normalized.substring(lastIndex),
-            italic: false
-        });
-    }
-
-    return parts.length > 0
-        ? parts
-        : [{
-            text: normalized,
-            italic: false
-        }];
-}
-
-function splitTextKeepParentheses(text) {
-    const result = [];
-    const regex = /\([^)]*\)|\S+/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-        result.push(match[0]);
-    }
-    return result;
-}
+            function splitTextKeepParentheses(text) {
+                const result = [];
+                const regex = /\([^)]*\)|\S+/g;
+                let match;
+                while ((match = regex.exec(text)) !== null) {
+                    const token = match[0];
+                    // Check if token is parenthetical content
+                    if (token.startsWith('(') && token.endsWith(')')) {
+                        // Split parenthetical content into individual words
+                        const innerContent = token.slice(1, -1).trim();
+                        if (innerContent) {
+                            const words = innerContent.split(/\s+/).filter((w) => w.length > 0);
+                            words.forEach((w, idx) => {
+                                if (idx === 0) {
+                                    result.push('(' + w);
+                                } else if (idx === words.length - 1) {
+                                    result.push(w + ')');
+                                } else {
+                                    result.push(w);
+                                }
+                            });
+                        } else {
+                            result.push(token);
+                        }
+                    } else {
+                        result.push(token);
+                    }
+                }
+                return result;
+            }
 
             function showToast(msg, type = 'info') {
                 const container = document.getElementById('toast-container');
@@ -1540,8 +1550,13 @@ function splitTextKeepParentheses(text) {
 
                 // --- HEADER ---
                 if (hLines.length === 1) {
+                    // Loop between text color and fill color
+                    const colorCycleDuration = 2.0;
+                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
+                    const headerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
-                    stageCtx.fillStyle = stageStyles.text;
+                    stageCtx.fillStyle = headerColor;
                     stageCtx.font = `700 ${headerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(hLines[0], width / 2, 154);
                 } else if (hLines.length > 1) {
@@ -1554,9 +1569,14 @@ function splitTextKeepParentheses(text) {
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
+                    // Loop between text color and fill color for each line
+                    const colorCycleDuration = 2.0;
+                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
+                    const headerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+
                     // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
-                    stageCtx.fillStyle = stageStyles.text;
+                    stageCtx.fillStyle = headerColor;
                     stageCtx.font = `700 ${headerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(hLines[cycleIdx], width / 2, 154);
                 }
@@ -1564,8 +1584,13 @@ function splitTextKeepParentheses(text) {
                 // --- FOOTER ---
                 if (fLines.length === 1) {
                     // Mengalikan 0.7 dengan overlayVisibility
+                    // Loop between text color and fill color
+                    const colorCycleDuration = 2.0;
+                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
+                    const footerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
-                    stageCtx.fillStyle = stageStyles.fill;
+                    stageCtx.fillStyle = footerColor;
                     stageCtx.font = `700 ${footerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(fLines[0], width / 2, height - 132);
                 } else if (fLines.length > 1) {
@@ -1578,9 +1603,14 @@ function splitTextKeepParentheses(text) {
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
+                    // Loop between text color and fill color for each line
+                    const colorCycleDuration = 2.0;
+                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
+                    const footerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+
                     // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
-                    stageCtx.fillStyle = stageStyles.fill;
+                    stageCtx.fillStyle = footerColor;
                     stageCtx.font = `700 ${footerFontSize}px ${stageStyles.fontFamily}`;
                     stageCtx.fillText(fLines[cycleIdx], width / 2, height - 132);
                 }
@@ -1658,268 +1688,192 @@ function splitTextKeepParentheses(text) {
                 });
             }
 
-function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
-    if (lineIdx < 0 || lineIdx >= linesData.length) return;
+            function renderCanvasKaraokeLine(lineIdx, yPos, isActiveLine, curTime) {
+                if (lineIdx < 0 || lineIdx >= linesData.length) return;
 
-    const tokenIndices = linesData[lineIdx];
-    if (!tokenIndices || tokenIndices.length === 0) return;
+                const tokenIndices = linesData[lineIdx];
+                if (!tokenIndices || tokenIndices.length === 0) return;
 
-    const width = stageCanvas.width;
-    const scaleFactor = 1;
-    const fontSize = stageStyles.fontSize || 48;
-    const fontFamily = stageStyles.fontFamily;
+                const width = stageCanvas.width;
+                const scaleFactor = 1;
+                const fontSize = stageStyles.fontSize || 48;
+                const fontFamily = stageStyles.fontFamily;
 
-    stageCtx.save();
+                stageCtx.save();
 
-    /*
-     * =====================================================
-     * BUILD WORD DATA
-     * =====================================================
-     *
-     * Contoh:
-     * "Aku (HO-HO-HO) ini"
-     *
-     * akan menjadi:
-     *
-     * Aku              normal
-     * (                normal
-     * HO-HO-HO         italic
-     * )                normal
-     * ini              normal
-     */
+                /*
+                 * =====================================================
+                 * BUILD WORD DATA
+                 * =====================================================
+                 *
+                 * Contoh:
+                 * "Aku (HO-HO-HO) ini"
+                 *
+                 * akan menjadi:
+                 *
+                 * Aku              normal
+                 * (                normal
+                 * HO-HO-HO         italic
+                 * )                normal
+                 * ini              normal
+                 */
 
-    const wordDataList = tokenIndices
-        .map((tIdx) => {
-            const tok = tokens[tIdx];
+                const wordDataList = tokenIndices
+                    .map((tIdx) => {
+                        const tok = tokens[tIdx];
 
-            if (!tok) return null;
+                        if (!tok) return null;
 
-            const cleanText = tok.text
-                .replace(/♪/g, '')
-                .trim();
+                        const cleanText = tok.text.replace(/♪/g, '').trim();
 
-            if (!cleanText) return null;
+                        if (!cleanText) return null;
 
-            const text = normalizeText(cleanText);
+                        const text = normalizeText(cleanText);
 
-            // Pecah bagian normal / italic
-            const parts = parseItalicParts(text);
+                        // Pecah bagian normal / italic
+                        const parts = parseItalicParts(text);
 
-            let textWidth = 0;
+                        let textWidth = 0;
 
-            parts.forEach((part) => {
-                stageCtx.font =
-                    `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+                        parts.forEach((part) => {
+                            stageCtx.font = `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
 
-                textWidth += stageCtx.measureText(part.text).width;
-            });
+                            textWidth += stageCtx.measureText(part.text).width;
+                        });
 
-            // Spasi antar token
-            stageCtx.font =
-                `900 ${fontSize}px ${fontFamily}`;
+                        // Spasi antar token
+                        stageCtx.font = `900 ${fontSize}px ${fontFamily}`;
 
-            const spaceWidth =
-                stageCtx.measureText(' ').width;
+                        const spaceWidth = stageCtx.measureText(' ').width;
 
-            const w = textWidth + spaceWidth;
+                        const w = textWidth + spaceWidth;
 
-            return {
-                tIdx,
-                tok,
-                text,
-                parts,
-                w
-            };
-        })
-        .filter(Boolean);
+                        return {
+                            tIdx,
+                            tok,
+                            text,
+                            parts,
+                            w,
+                        };
+                    })
+                    .filter(Boolean);
 
-    if (wordDataList.length === 0) {
-        stageCtx.restore();
-        return;
-    }
-
-    /*
-     * =====================================================
-     * CENTER LINE
-     * =====================================================
-     */
-
-    const totalLineWidth = wordDataList.reduce(
-        (sum, item) => sum + item.w,
-        0
-    );
-
-    let startX =
-        (width - totalLineWidth) / 2;
-
-    /*
-     * =====================================================
-     * DRAW EACH TOKEN
-     * =====================================================
-     */
-
-    wordDataList.forEach((item) => {
-
-        const {
-            tIdx,
-            tok,
-            parts,
-            w
-        } = item;
-
-        /*
-         * =================================================
-         * KARAOKE FILL %
-         * =================================================
-         */
-
-        let fillPct = 0;
-
-        if (!isPreviewMode) {
-
-            if (tIdx < currentTokenIndex) {
-
-                fillPct = 100;
-
-            } else if (
-                tIdx === currentTokenIndex &&
-                isRecordingSpacePressed
-            ) {
-
-                fillPct = 100;
-            }
-
-        } else {
-
-            if (tok.start !== null) {
-
-                if (curTime < tok.start) {
-
-                    fillPct = 0;
-
-                } else if (
-                    tok.end !== null &&
-                    curTime >= tok.end
-                ) {
-
-                    fillPct = 100;
-
-                } else if (
-                    tok.end !== null &&
-                    curTime >= tok.start &&
-                    curTime < tok.end
-                ) {
-
-                    fillPct =
-                        ((curTime - tok.start) /
-                        (tok.end - tok.start)) * 100;
-
-                } else if (
-                    curTime >= tok.start &&
-                    tok.end === null
-                ) {
-
-                    fillPct = 100;
+                if (wordDataList.length === 0) {
+                    stageCtx.restore();
+                    return;
                 }
+
+                /*
+                 * =====================================================
+                 * CENTER LINE
+                 * =====================================================
+                 */
+
+                const totalLineWidth = wordDataList.reduce((sum, item) => sum + item.w, 0);
+
+                let startX = (width - totalLineWidth) / 2;
+
+                /*
+                 * =====================================================
+                 * DRAW EACH TOKEN
+                 * =====================================================
+                 */
+
+                wordDataList.forEach((item) => {
+                    const { tIdx, tok, parts, w } = item;
+
+                    /*
+                     * =================================================
+                     * KARAOKE FILL %
+                     * =================================================
+                     */
+
+                    let fillPct = 0;
+
+                    if (!isPreviewMode) {
+                        if (tIdx < currentTokenIndex) {
+                            fillPct = 100;
+                        } else if (tIdx === currentTokenIndex && isRecordingSpacePressed) {
+                            fillPct = 100;
+                        }
+                    } else {
+                        if (tok.start !== null) {
+                            if (curTime < tok.start) {
+                                fillPct = 0;
+                            } else if (tok.end !== null && curTime >= tok.end) {
+                                fillPct = 100;
+                            } else if (tok.end !== null && curTime >= tok.start && curTime < tok.end) {
+                                fillPct = ((curTime - tok.start) / (tok.end - tok.start)) * 100;
+                            } else if (curTime >= tok.start && tok.end === null) {
+                                fillPct = 100;
+                            }
+                        }
+                    }
+
+                    fillPct = Math.max(0, Math.min(100, fillPct));
+
+                    /*
+                     * =================================================
+                     * DRAW BASE TEXT
+                     * =================================================
+                     */
+
+                    let segmentX = startX;
+
+                    parts.forEach((part) => {
+                        stageCtx.font = `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+
+                        stageCtx.fillStyle = stageStyles.text || '#ffffff';
+
+                        stageCtx.fillText(part.text, segmentX, yPos);
+
+                        segmentX += stageCtx.measureText(part.text).width;
+                    });
+
+                    /*
+                     * =================================================
+                     * DRAW KARAOKE FILL
+                     * =================================================
+                     */
+
+                    if (fillPct > 0) {
+                        stageCtx.save();
+
+                        stageCtx.beginPath();
+
+                        stageCtx.rect(startX, yPos - 100 * scaleFactor, (w * fillPct) / 100, 180 * scaleFactor);
+
+                        stageCtx.clip();
+
+                        segmentX = startX;
+
+                        parts.forEach((part) => {
+                            stageCtx.font = `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
+
+                            stageCtx.lineWidth = 8 * scaleFactor;
+
+                            stageCtx.strokeStyle = '#000000';
+
+                            stageCtx.strokeText(part.text, segmentX, yPos);
+
+                            stageCtx.fillStyle = stageStyles.fill || '#ffde59';
+
+                            stageCtx.fillText(part.text, segmentX, yPos);
+
+                            segmentX += stageCtx.measureText(part.text).width;
+                        });
+
+                        stageCtx.restore();
+                    }
+
+                    /*
+                     * Spacing antar token
+                     */
+                    startX += w;
+                });
+
+                stageCtx.restore();
             }
-        }
-
-        fillPct =
-            Math.max(
-                0,
-                Math.min(100, fillPct)
-            );
-
-        /*
-         * =================================================
-         * DRAW BASE TEXT
-         * =================================================
-         */
-
-        let segmentX = startX;
-
-        parts.forEach((part) => {
-
-            stageCtx.font =
-                `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
-
-            stageCtx.fillStyle =
-                stageStyles.text || '#ffffff';
-
-            stageCtx.fillText(
-                part.text,
-                segmentX,
-                yPos
-            );
-
-            segmentX +=
-                stageCtx.measureText(part.text).width;
-        });
-
-        /*
-         * =================================================
-         * DRAW KARAOKE FILL
-         * =================================================
-         */
-
-        if (fillPct > 0) {
-
-            stageCtx.save();
-
-            stageCtx.beginPath();
-
-            stageCtx.rect(
-                startX,
-                yPos - 100 * scaleFactor,
-                (w * fillPct) / 100,
-                180 * scaleFactor
-            );
-
-            stageCtx.clip();
-
-            segmentX = startX;
-
-            parts.forEach((part) => {
-
-                stageCtx.font =
-                    `${part.italic ? 'italic ' : ''}900 ${fontSize}px ${fontFamily}`;
-
-                stageCtx.lineWidth =
-                    8 * scaleFactor;
-
-                stageCtx.strokeStyle =
-                    '#000000';
-
-                stageCtx.strokeText(
-                    part.text,
-                    segmentX,
-                    yPos
-                );
-
-                stageCtx.fillStyle =
-                    stageStyles.fill || '#ffde59';
-
-                stageCtx.fillText(
-                    part.text,
-                    segmentX,
-                    yPos
-                );
-
-                segmentX +=
-                    stageCtx.measureText(part.text).width;
-            });
-
-            stageCtx.restore();
-        }
-
-        /*
-         * Spacing antar token
-         */
-        startX += w;
-    });
-
-    stageCtx.restore();
-}
 
             function setupAudioEvents() {
                 audio.ontimeupdate = () => {

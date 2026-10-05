@@ -530,6 +530,16 @@ function parseItalicParts(text) {
         }];
 }
 
+function splitTextKeepParentheses(text) {
+    const result = [];
+    const regex = /\([^)]*\)|\S+/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        result.push(match[0]);
+    }
+    return result;
+}
+
             function showToast(msg, type = 'info') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -908,7 +918,8 @@ function parseItalicParts(text) {
                         if (!cleanText) return;
 
                         if (splitByWord) {
-                            const words = cleanText.split(/\s+/).filter((w) => w.length > 0);
+                            // Split by words but keep parenthetical content together
+                            const words = splitTextKeepParentheses(cleanText);
                             const totalDur = Math.max(0.3, endSec - startSec);
                             const perWordDur = totalDur / Math.max(1, words.length);
 
@@ -966,7 +977,8 @@ function parseItalicParts(text) {
                     let lineTokenIndices = [];
 
                     if (splitByWord) {
-                        const words = textContent.split(/\s+/).filter((w) => w.length > 0);
+                        // Split by words but keep parenthetical content together
+                        const words = splitTextKeepParentheses(textContent);
                         const totalDur = Math.max(0.3, endSec - startSec);
                         const perWordDur = totalDur / Math.max(1, words.length);
 
@@ -1070,7 +1082,8 @@ function parseItalicParts(text) {
                             }
                         });
                     } else if (splitByWord) {
-                        const words = textContent.split(/\s+/).filter((w) => w.length > 0);
+                        // Split by words but keep parenthetical content together
+                        const words = splitTextKeepParentheses(textContent);
                         words.forEach((w, wIdx) => {
                             tokenCounter++;
                             const wordStart = lineStartTime !== null ? lineStartTime + wIdx * 0.45 : null;

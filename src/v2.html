@@ -1550,10 +1550,8 @@ Bersama bayangmu dalam mimpi
 
                 // --- HEADER ---
                 if (hLines.length === 1) {
-                    // Loop between text color and fill color
-                    const colorCycleDuration = 2.0;
-                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
-                    const headerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+                    // Single line: static color (text color), no cycling
+                    const headerColor = stageStyles.text;
 
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
                     stageCtx.fillStyle = headerColor;
@@ -1569,10 +1567,8 @@ Bersama bayangmu dalam mimpi
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
-                    // Loop between text color and fill color for each line
-                    const colorCycleDuration = 2.0;
-                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
-                    const headerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+                    // Color follows text change: alternate between text and fill color per line
+                    const headerColor = cycleIdx % 2 === 0 ? stageStyles.text : stageStyles.fill;
 
                     // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
@@ -1583,11 +1579,8 @@ Bersama bayangmu dalam mimpi
 
                 // --- FOOTER ---
                 if (fLines.length === 1) {
-                    // Mengalikan 0.7 dengan overlayVisibility
-                    // Loop between text color and fill color
-                    const colorCycleDuration = 2.0;
-                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
-                    const footerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+                    // Single line: static color (text color), no cycling
+                    const footerColor = stageStyles.text;
 
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * overlayVisibility));
                     stageCtx.fillStyle = footerColor;
@@ -1603,10 +1596,8 @@ Bersama bayangmu dalam mimpi
                         else if (phaseTime > cycleDuration - 0.5) fadeAlpha = (cycleDuration - phaseTime) / 0.5;
                     }
 
-                    // Loop between text color and fill color for each line
-                    const colorCycleDuration = 2.0;
-                    const colorCycleIdx = Math.floor(curTime / colorCycleDuration) % 2;
-                    const footerColor = colorCycleIdx === 0 ? stageStyles.text : stageStyles.fill;
+                    // Color follows text change: alternate between text and fill color per line
+                    const footerColor = cycleIdx % 2 === 0 ? stageStyles.text : stageStyles.fill;
 
                     // Mengalikan 0.7 dengan fadeAlpha & overlayVisibility
                     stageCtx.globalAlpha = Math.max(0, Math.min(1, baseOpacity * fadeAlpha * overlayVisibility));
@@ -2514,7 +2505,7 @@ Bersama bayangmu dalam mimpi
                 const cs = Math.floor((s % 1) * 100);
                 return `${h}:${String(m).padStart(2, '0')}:${String(Math.floor(s)).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
             }
-            
+
 
             function formatSrtTime(sec) {
                 const h = Math.floor(sec / 3600);

@@ -383,6 +383,7 @@
         <video id="bg-video-element" class="hidden" loop muted playsinline></video>
         <img id="bg-image-element" class="hidden" alt="Background" />
 
+        <script src="../dist/scripts/script-v2.min.js"></script>
         <script>
             const STORAGE_KEY = 'lyrics_player_editor_data_v14';
             const LEGACY_STORAGE_KEY = ['s', 'a', 'y', 'a', 't', 'o', 'o', '_karaoke_data_v14'].join('');
@@ -454,8 +455,61 @@ Bersama bayangmu dalam mimpi
 [03:42.705]
 [03:44.685]`;
 
+            const localStorageLoad = () => {
+                const savedRaw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+                if (savedRaw) {
+                    try {
+                        const data = JSON.parse(savedRaw);
+                        if (data.rawInput !== undefined) document.getElementById('raw-lyrics-input').value = data.rawInput;
+                        if (data.splitByWord !== undefined) document.getElementById('split-by-word-checkbox').checked = data.splitByWord;
+                        if (data.headerText !== undefined) document.getElementById('header-text-input').value = data.headerText;
+                        if (data.footerText !== undefined) document.getElementById('footer-text-input').value = data.footerText;
+                        audioFileMeta = data.audioFileMeta || null;
+                        bgFileMeta = data.bgFileMeta || null;
+                        restorePersistedMedia(data);
+
+                        if (data.tokens && data.tokens.length > 0) {
+                            tokens = data.tokens;
+                            linesData = data.linesData || [];
+                            songEndMarkers = data.songEndMarkers || [];
+                            currentTokenIndex = data.currentTokenIndex || 0;
+                        }
+                        if (data.stageStyles) {
+                            stageStyles = { ...stageStyles, ...data.stageStyles };
+                            document.getElementById('picker-bg-color').value = stageStyles.bg || '#000000';
+                            document.getElementById('picker-text-color').value = stageStyles.text || '#ffffff';
+                            document.getElementById('picker-fill-color').value = stageStyles.fill || '#ffde59';
+                            document.getElementById('picker-font-family').value = stageStyles.fontFamily || 'Nexa Black';
+                            if (stageStyles.fontSize) {
+                                document.getElementById('picker-font-size').value = stageStyles.fontSize;
+                            }
+                            if (stageStyles.resolution) {
+                                changeCanvasResolution(stageStyles.resolution, false);
+                            }
+                        }
+                        if (data.recordPlaybackSpeed) {
+                            recordPlaybackSpeed = parseFloat(data.recordPlaybackSpeed) || 1.0;
+                            document.getElementById('custom-speed-slider').value = recordPlaybackSpeed;
+                            document.getElementById('custom-speed-input').value = recordPlaybackSpeed.toFixed(2);
+                        }
+                    } catch (e) {
+                        console.error('LocalStorage load error:', e);
+                    }
+                }
+
+                if (tokens.length === 0) {
+                    document.getElementById('raw-lyrics-input').value = defaultSampleLyrics;
+                    document.getElementById('header-text-input').value = '~ Lyrics Player Editor ~\n~ High Definition Audio ~';
+                    document.getElementById('footer-text-input').value = 'Producer & Arranger: Music Studio\nOfficial Exporter Engine';
+                    parseLyricsFromInput();
+                } else {
+                    updateTokenCounts();
+                }
+            };
+
             window.addEventListener('load', () => {
-                loadFromLocalStorage();
+                localStorageLoad();
+
                 setupKeyboardListeners();
                 setupAudioEvents();
                 setupTapButtonEvents();
@@ -476,13 +530,13 @@ Bersama bayangmu dalam mimpi
             function parseItalicParts(text) {
                 const normalized = normalizeText(text);
                 const parts = [];
-                const regex = /\(([^()]*)\)/g;
+                // Match complete parentheses and also the split-token forms: "(Tapi" and "tau)".
+                const regex = /\([^)]*\)|\([^()]*$|^[^()]*\)/g;
 
                 let lastIndex = 0;
                 let match;
 
                 while ((match = regex.exec(normalized)) !== null) {
-                    // Teks sebelum kurung
                     if (match.index > lastIndex) {
                         parts.push({
                             text: normalized.substring(lastIndex, match.index),
@@ -490,23 +544,27 @@ Bersama bayangmu dalam mimpi
                         });
                     }
 
-                    // SEMUA ISI KURUNG (termasuk kurung buka/tutup) = ITALIC
-                    if (match[1]) {
-                        parts.push({
-                            text: '(' + match[1] + ')',
-                            italic: true,
-                        });
-                    }
+                    parts.push({
+                        text: match[0],
+                        italic: true,
+                    });
 
                     lastIndex = regex.lastIndex;
                 }
 
                 // Teks setelah kurung
                 if (lastIndex < normalized.length) {
-                    parts.push({
-                        text: normalized.substring(lastIndex),
-                        italic: false,
-                    });
+                    const remaining = normalized.substring(lastIndex);
+                    if (remaining === '(') {
+                        parts.push({ text: '(', italic: true });
+                    } else if (remaining === ')') {
+                        parts.push({ text: ')', italic: true });
+                    } else {
+                        parts.push({
+                            text: remaining,
+                            italic: false,
+                        });
+                    }
                 }
 
                 return parts.length > 0
@@ -520,34 +578,8 @@ Bersama bayangmu dalam mimpi
             }
 
             function splitTextKeepParentheses(text) {
-                const result = [];
-                const regex = /\([^)]*\)|\S+/g;
-                let match;
-                while ((match = regex.exec(text)) !== null) {
-                    const token = match[0];
-                    // Check if token is parenthetical content
-                    if (token.startsWith('(') && token.endsWith(')')) {
-                        // Split parenthetical content into individual words
-                        const innerContent = token.slice(1, -1).trim();
-                        if (innerContent) {
-                            const words = innerContent.split(/\s+/).filter((w) => w.length > 0);
-                            words.forEach((w, idx) => {
-                                if (idx === 0) {
-                                    result.push('(' + w);
-                                } else if (idx === words.length - 1) {
-                                    result.push(w + ')');
-                                } else {
-                                    result.push(w);
-                                }
-                            });
-                        } else {
-                            result.push(token);
-                        }
-                    } else {
-                        result.push(token);
-                    }
-                }
-                return result;
+                // Keep each word as a separate timing block, including words inside parentheses.
+                return text.match(/\S+/g) || [];
             }
 
             function showToast(msg, type = 'info') {
@@ -605,11 +637,11 @@ Bersama bayangmu dalam mimpi
                 isMagnetSnapEnabled = !isMagnetSnapEnabled;
                 const btn = document.getElementById('btn-toggle-snap');
                 if (isMagnetSnapEnabled) {
-                    btn.className = 'px-2.5 py-0.5 bg-sky-950/60 border border-sky-600/60 text-sky-300 text-[11px] font-bold rounded flex items-center gap-1 transition';
+                    btn.className = 'flex items-center gap-1 rounded border border-sky-600/60 bg-sky-950/60 px-2.5 py-0.5 text-[11px] font-bold text-sky-300 transition';
                     btn.innerHTML = `<i class="fa-solid fa-magnet"></i> Snap: ON`;
                     showToast('Magnet snap enabled', 'success');
                 } else {
-                    btn.className = 'px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-500 text-[11px] font-bold rounded flex items-center gap-1 transition';
+                    btn.className = 'flex items-center gap-1 rounded border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-[11px] font-bold text-zinc-500 transition';
                     btn.innerHTML = `<i class="fa-solid fa-magnet"></i> Snap: OFF`;
                     showToast('Magnet snap disabled');
                 }
@@ -728,58 +760,6 @@ Bersama bayangmu dalam mimpi
                     }
                 } catch (error) {
                     console.error('Media persistence load error:', error);
-                }
-            }
-
-            function loadFromLocalStorage() {
-                const savedRaw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-                if (savedRaw) {
-                    try {
-                        const data = JSON.parse(savedRaw);
-                        if (data.rawInput !== undefined) document.getElementById('raw-lyrics-input').value = data.rawInput;
-                        if (data.splitByWord !== undefined) document.getElementById('split-by-word-checkbox').checked = data.splitByWord;
-                        if (data.headerText !== undefined) document.getElementById('header-text-input').value = data.headerText;
-                        if (data.footerText !== undefined) document.getElementById('footer-text-input').value = data.footerText;
-                        audioFileMeta = data.audioFileMeta || null;
-                        bgFileMeta = data.bgFileMeta || null;
-                        restorePersistedMedia(data);
-
-                        if (data.tokens && data.tokens.length > 0) {
-                            tokens = data.tokens;
-                            linesData = data.linesData || [];
-                            songEndMarkers = data.songEndMarkers || [];
-                            currentTokenIndex = data.currentTokenIndex || 0;
-                        }
-                        if (data.stageStyles) {
-                            stageStyles = { ...stageStyles, ...data.stageStyles };
-                            document.getElementById('picker-bg-color').value = stageStyles.bg || '#000000';
-                            document.getElementById('picker-text-color').value = stageStyles.text || '#ffffff';
-                            document.getElementById('picker-fill-color').value = stageStyles.fill || '#ffde59';
-                            document.getElementById('picker-font-family').value = stageStyles.fontFamily || 'Nexa Black';
-                            if (stageStyles.fontSize) {
-                                document.getElementById('picker-font-size').value = stageStyles.fontSize;
-                            }
-                            if (stageStyles.resolution) {
-                                changeCanvasResolution(stageStyles.resolution, false);
-                            }
-                        }
-                        if (data.recordPlaybackSpeed) {
-                            recordPlaybackSpeed = parseFloat(data.recordPlaybackSpeed) || 1.0;
-                            document.getElementById('custom-speed-slider').value = recordPlaybackSpeed;
-                            document.getElementById('custom-speed-input').value = recordPlaybackSpeed.toFixed(2);
-                        }
-                    } catch (e) {
-                        console.error('LocalStorage load error:', e);
-                    }
-                }
-
-                if (tokens.length === 0) {
-                    document.getElementById('raw-lyrics-input').value = defaultSampleLyrics;
-                    document.getElementById('header-text-input').value = '~ Lyrics Player Editor ~\n~ High Definition Audio ~';
-                    document.getElementById('footer-text-input').value = 'Producer & Arranger: Music Studio\nOfficial Exporter Engine';
-                    parseLyricsFromInput();
-                } else {
-                    updateTokenCounts();
                 }
             }
 
@@ -1149,11 +1129,11 @@ Bersama bayangmu dalam mimpi
             function switchTab(tabName) {
                 ['setup', 'editor'].forEach((t) => {
                     document.getElementById(`tab-${t}`).classList.add('hidden');
-                    document.getElementById(`btn-tab-${t}`).className = 'px-3 py-1 rounded-md font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200';
+                    document.getElementById(`btn-tab-${t}`).className = 'flex items-center gap-1.5 rounded-md px-3 py-1 font-semibold text-zinc-400 transition hover:text-zinc-200';
                 });
 
                 document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-                document.getElementById(`btn-tab-${tabName}`).className = 'px-3 py-1 rounded-md transition flex items-center gap-1.5 bg-amber-500 text-black font-bold shadow';
+                document.getElementById(`btn-tab-${tabName}`).className = 'flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-1 font-bold text-black shadow transition';
 
                 if (tabName === 'editor') {
                     render2TrackTimeline();
@@ -1167,13 +1147,13 @@ Bersama bayangmu dalam mimpi
 
                 if (isPreviewMode) {
                     badge.innerText = 'PREVIEW MODE';
-                    btn.className = 'px-3 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 text-xs font-bold rounded-md flex items-center gap-1.5 transition';
+                    btn.className = 'flex items-center gap-1.5 rounded-md border border-emerald-600/50 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-300 transition hover:bg-emerald-900';
                     audio.playbackRate = 1.0;
                     document.getElementById('speed-control-container').classList.add('opacity-40', 'pointer-events-none');
                     showToast('Preview mode (fade enabled, Space: play/pause)');
                 } else {
                     badge.innerText = 'EDIT MODE';
-                    btn.className = 'px-3 py-1.5 bg-amber-950/60 hover:bg-amber-900 border border-amber-600/50 text-amber-200 text-xs font-bold rounded-md flex items-center gap-1.5 transition';
+                    btn.className = 'flex items-center gap-1.5 rounded-md border border-amber-600/50 bg-amber-950/60 px-3 py-1.5 text-xs font-bold text-amber-200 transition hover:bg-amber-900';
                     audio.playbackRate = recordPlaybackSpeed;
                     document.getElementById('speed-control-container').classList.remove('opacity-40', 'pointer-events-none');
                     showToast('Edit mode (fade disabled for lyric editing)');
@@ -1307,6 +1287,24 @@ Bersama bayangmu dalam mimpi
                 updateTokenCounts();
             }
 
+            function shiftFollowingTokensToAvoidOverlap(tokenIdx, minimumStart) {
+                const currentLineIdx = tokens[tokenIdx]?.lineIndex;
+                if (currentLineIdx === undefined) return;
+
+                for (let i = tokenIdx + 1; i < tokens.length; i++) {
+                    const nextWord = tokens[i];
+                    if (nextWord.lineIndex !== currentLineIdx) break;
+
+                    const nextStart = nextWord.start === null ? minimumStart : Math.max(nextWord.start, minimumStart);
+                    const delta = nextWord.start === null ? 0 : nextStart - nextWord.start;
+                    nextWord.start = parseFloat(nextStart.toFixed(3));
+                    if (nextWord.end !== null) {
+                        nextWord.end = parseFloat((nextWord.end + delta).toFixed(3));
+                    }
+                    minimumStart = Math.max(minimumStart, nextWord.end ?? nextWord.start + 0.1);
+                }
+            }
+
             function onSpaceDown() {
                 initAudioContext();
                 skipInstrumentalTokens();
@@ -1316,18 +1314,23 @@ Bersama bayangmu dalam mimpi
                 spacePressStartTime = audio.currentTime;
 
                 document.getElementById('space-state-text').innerText = 'SPACE: PRESSED';
-                document.getElementById('space-state-text').className = 'px-2.5 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded-full text-[11px] font-mono animate-pulse';
+                document.getElementById('space-state-text').className = 'animate-pulse rounded-full border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 font-mono text-[11px] text-amber-400';
 
                 if (currentTokenIndex < tokens.length) {
+                    // Set start time for current token
+                    tokens[currentTokenIndex].start = parseFloat(spacePressStartTime.toFixed(3));
+                    tokens[currentTokenIndex].end = parseFloat(spacePressStartTime.toFixed(3)) + 0.1;
+
+                    // Update previous token's end time ONLY if it's on the same line and has a start time
                     if (currentTokenIndex > 0) {
                         const prevWord = tokens[currentTokenIndex - 1];
-                        if (prevWord && prevWord.lineIndex === tokens[currentTokenIndex].lineIndex) {
+                        const currWord = tokens[currentTokenIndex];
+                        if (prevWord && prevWord.lineIndex === currWord.lineIndex && prevWord.start !== null) {
                             prevWord.end = parseFloat(spacePressStartTime.toFixed(3));
                         }
                     }
 
-                    tokens[currentTokenIndex].start = parseFloat(spacePressStartTime.toFixed(3));
-                    tokens[currentTokenIndex].end = parseFloat(spacePressStartTime.toFixed(3)) + 0.1;
+                    shiftFollowingTokensToAvoidOverlap(currentTokenIndex, tokens[currentTokenIndex].end);
                     render2TrackTimeline();
                 }
             }
@@ -1337,10 +1340,12 @@ Bersama bayangmu dalam mimpi
                 const spacePressEndTime = audio.currentTime;
 
                 document.getElementById('space-state-text').innerText = 'SPACE: READY';
-                document.getElementById('space-state-text').className = 'px-2.5 py-1 bg-black/80 border border-zinc-800 text-zinc-400 rounded-full text-[11px] font-mono';
+                document.getElementById('space-state-text').className = 'rounded-full border border-zinc-800 bg-black/80 px-2.5 py-1 font-mono text-[11px] text-zinc-400';
 
                 if (currentTokenIndex < tokens.length) {
                     tokens[currentTokenIndex].end = parseFloat(spacePressEndTime.toFixed(3));
+
+                    shiftFollowingTokensToAvoidOverlap(currentTokenIndex, tokens[currentTokenIndex].end);
 
                     if (currentTokenIndex < tokens.length - 1) {
                         currentTokenIndex++;
@@ -1691,6 +1696,7 @@ Bersama bayangmu dalam mimpi
                 const fontFamily = stageStyles.fontFamily;
 
                 stageCtx.save();
+                let italicBlockActive = false;
 
                 /*
                  * =====================================================
@@ -1720,9 +1726,14 @@ Bersama bayangmu dalam mimpi
                         if (!cleanText) return null;
 
                         const text = normalizeText(cleanText);
+                        const startsItalicBlock = text.startsWith('(');
+                        const endsItalicBlock = text.endsWith(')');
+                        const tokenIsItalic = italicBlockActive || startsItalicBlock;
+                        if (endsItalicBlock) italicBlockActive = false;
+                        else if (startsItalicBlock || tokenIsItalic) italicBlockActive = true;
 
-                        // Pecah bagian normal / italic
-                        const parts = parseItalicParts(text);
+                        // Apply italic to every token between the opening and closing parenthesis.
+                        const parts = tokenIsItalic ? [{ text, italic: true }] : parseItalicParts(text);
 
                         let textWidth = 0;
 
@@ -1895,14 +1906,14 @@ Bersama bayangmu dalam mimpi
                 audio.onplay = () => {
                     initAudioContext();
                     document.getElementById('btn-play-pause').innerHTML = `<i class="fa-solid fa-pause"></i>`;
-                    document.getElementById('recording-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-ping';
+                    document.getElementById('recording-dot').className = 'h-2 w-2 animate-ping rounded-full bg-emerald-500';
                     document.getElementById('recording-status-text').innerText = isPreviewMode ? 'PREVIEWING' : 'PLAYING';
                     if (bgMediaType === 'video' && bgVideo) bgVideo.play();
                 };
 
                 audio.onpause = () => {
                     document.getElementById('btn-play-pause').innerHTML = `<i class="fa-solid fa-play"></i>`;
-                    document.getElementById('recording-dot').className = 'w-2 h-2 rounded-full bg-zinc-500';
+                    document.getElementById('recording-dot').className = 'h-2 w-2 rounded-full bg-zinc-500';
                     document.getElementById('recording-status-text').innerText = 'PAUSED';
                     if (bgMediaType === 'video' && bgVideo) bgVideo.pause();
                 };
@@ -2013,12 +2024,25 @@ Bersama bayangmu dalam mimpi
 
                     if (isRecordingSpacePressed && currentTokenIndex < tokens.length) {
                         tokens[currentTokenIndex].end = parseFloat(audio.currentTime.toFixed(3));
+                        shiftFollowingTokensToAvoidOverlap(currentTokenIndex, tokens[currentTokenIndex].end);
+
                         const activeBlock = document.querySelector(`.timeline-clip-block[data-token-idx="${currentTokenIndex}"]`);
                         if (activeBlock) {
                             const startSec = tokens[currentTokenIndex].start;
                             const endSec = tokens[currentTokenIndex].end;
                             const durSec = Math.max(0.1, endSec - startSec);
                             activeBlock.style.width = `${Math.max(28, durSec * timelineZoomPxPerSec)}px`;
+                        }
+
+                        // Move following blocks live while Space is held, so they never overlap.
+                        for (let index = currentTokenIndex + 1; index < tokens.length; index++) {
+                            const token = tokens[index];
+                            if (token.lineIndex !== tokens[currentTokenIndex].lineIndex) break;
+                            const block = document.querySelector(`.timeline-clip-block[data-token-idx="${index}"]`);
+                            if (!block || token.start === null) continue;
+                            const endSec = token.end !== null ? token.end : token.start + 0.4;
+                            block.style.left = `${token.start * timelineZoomPxPerSec}px`;
+                            block.style.width = `${Math.max(28, (endSec - token.start) * timelineZoomPxPerSec)}px`;
                         }
                     }
 
@@ -2074,7 +2098,7 @@ Bersama bayangmu dalam mimpi
                 const stepSec = timelineZoomPxPerSec < 60 ? 5 : timelineZoomPxPerSec < 120 ? 2 : 1;
                 for (let sec = 0; sec <= maxTime; sec += stepSec) {
                     const mark = document.createElement('div');
-                    mark.className = 'absolute top-0 bottom-0 border-l border-zinc-800 pl-1 flex items-center';
+                    mark.className = 'absolute bottom-0 top-0 flex items-center border-l border-zinc-800 pl-1';
                     mark.style.left = `${sec * timelineZoomPxPerSec}px`;
                     mark.innerText = formatTime(sec);
                     ruler.appendChild(mark);
@@ -2505,7 +2529,6 @@ Bersama bayangmu dalam mimpi
                 const cs = Math.floor((s % 1) * 100);
                 return `${h}:${String(m).padStart(2, '0')}:${String(Math.floor(s)).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
             }
-
 
             function formatSrtTime(sec) {
                 const h = Math.floor(sec / 3600);

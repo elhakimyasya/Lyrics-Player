@@ -5,6 +5,7 @@ module.exports = {
     mode: 'production',
     entry: {
         'script': './src/scripts/script.js',
+        'script-v2': './src/scripts/script-v2.js',
     },
     output: {
         clean: false,

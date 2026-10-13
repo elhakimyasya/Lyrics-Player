@@ -1,7 +1,7 @@
-import { lyricsSettings } from "./modules/lyricsSettings";
-import { lyricsDom, lyricsGetCanvasContext } from "./modules/lyricsDom";
-import { lyricsInitializeApplication } from "./modules/lyricsAppInit";
-import { lyricsBindEvents } from "./modules/lyricsEventBindings";
+import { lyricsSettings } from "./modules/v1/lyricsSettings";
+import { lyricsDom, lyricsGetCanvasContext } from "./modules/v1/lyricsDom";
+import { lyricsInitializeApplication } from "./modules/v1/lyricsAppInit";
+import { lyricsBindEvents } from "./modules/v1/lyricsEventBindings";
 
 lyricsSettings.lyricsCanvasContext = lyricsGetCanvasContext(lyricsDom.canvasPreview);
 

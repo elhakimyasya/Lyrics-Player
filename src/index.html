@@ -44,7 +44,8 @@
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
                         <div class="flex items-center justify-between">
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-teal h-2 w-2 rounded-full"></span> Header</h2>
-                            <button type="button" class="element_button_select_header text-meta cursor-pointer font-mono text-xs tracking-tight">Select Template</button>
+                            
+                            <button type="button" class="element_button_select_header text-teal cursor-pointer font-mono text-xs tracking-tight">Template</button>
                         </div>
 
                         <textarea class="element_textarea_header border-border focus:border-teal focus:ring-teal/10 bg-foreground text-teal h-25 w-full rounded-xl border p-4 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Header Text"></textarea>
@@ -53,7 +54,8 @@
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
                         <div class="flex items-center justify-between">
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-cyan h-2 w-2 rounded-full"></span> Footer</h2>
-                            <button type="button" class="element_button_select_footer text-meta cursor-pointer font-mono text-xs tracking-tight">Select Template</button>
+                            
+                            <button type="button" class="element_button_select_footer text-cyan cursor-pointer font-mono text-xs tracking-tight">Template</button>
                         </div>
 
                         <textarea class="element_textarea_footer border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan h-25 w-full rounded-xl border p-4 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Footer Text"></textarea>
@@ -88,25 +90,26 @@
 
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Audio</span>
-                            <button type="button" class="element_button_remove_audio text-rose-500 hover:text-rose-400 text-[10px] font-bold uppercase transition-colors">Remove</button>
+
+                            <button type="button" class="element_button_remove_audio hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
-                        <input class="element_input_audio border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan file:bg-cyan file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
+                        <input class="element_input_audio border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
                     </label>
 
                     <label class="block cursor-pointer space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Background (Image / Video)</span>
-                            <button type="button" class="element_button_remove_background text-rose-500 hover:text-rose-400 text-[10px] font-bold uppercase transition-colors">Remove</button>
+                            <button type="button" class="element_button_remove_background hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
-                        <input class="element_input_background border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan file:bg-cyan file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
+                        <input class="element_input_background border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
                     </label>
 
                     <label class="block cursor-pointer space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Intro (Audio / Video)</span>
-                            <button type="button" class="element_button_remove_intro text-rose-500 hover:text-rose-400 text-[10px] font-bold uppercase transition-colors">Remove</button>
+                            <button type="button" class="element_button_remove_intro hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
                         <input class="element_input_intro border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*,video/*" />
@@ -121,7 +124,7 @@
                         <label class="block cursor-pointer space-y-2">
                             <span class="text-meta block text-xs font-semibold">Background Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
                                 <input type="color" value="#000000" class="element_input_bg_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
                                 <span class="font-mono text-xs">HEX</span>
@@ -131,7 +134,7 @@
                         <label class="block cursor-pointer space-y-2">
                             <span class="text-meta block text-xs font-semibold">Key Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
                                 <input type="color" value="#ffde59" class="element_input_key_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
                                 <span class="font-mono text-xs">HEX</span>
@@ -141,7 +144,7 @@
                         <label class="block cursor-pointer space-y-2">
                             <span class="text-meta block text-xs font-semibold">Text Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
                                 <input type="color" value="#ffffff" class="element_input_text_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
                                 <span class="font-mono text-xs">HEX</span>
@@ -174,7 +177,7 @@
             <div class="border-border bg-background w-[min(92vw,640px)] overflow-hidden rounded-3xl border shadow-2xl">
                 <div class="border-border flex items-start justify-between border-b p-6">
                     <div>
-                        <p class="text-teal mb-2 text-[10px] font-bold uppercase tracking-[0.25em]">Header Library</p>
+                        <p class="text-teal mb-2 cursor-pointer font-mono text-xs tracking-[0.25em]">Header Library</p>
                         <h2 class="text-2xl font-black tracking-tight">Choose a Header Template</h2>
                     </div>
 
@@ -201,7 +204,7 @@
             <div class="border-border bg-background w-[min(92vw,640px)] overflow-hidden rounded-3xl border shadow-2xl">
                 <div class="border-border flex items-start justify-between border-b p-6">
                     <div>
-                        <p class="text-cyan mb-2 text-[10px] font-bold uppercase tracking-[0.25em]">Footer Library</p>
+                        <p class="text-cyan mb-2 cursor-pointer font-mono text-xs tracking-[0.25em]">Footer Library</p>
                         <h2 class="text-2xl font-black tracking-tight">Choose a Footer Template</h2>
                     </div>
 

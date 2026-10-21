@@ -1,9 +1,5 @@
 import { lyricsSettings } from './lyricsCore';
 
-export const lyricsStorageLoad = (storageKey, storageFallback = '') => {
-    return localStorage.getItem(storageKey) ?? storageFallback;
-};
-
 const storageOpenDatabase = () => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(lyricsSettings.lyricsDatabaseName, lyricsSettings.lyricsDatabaseVersion);
@@ -16,6 +12,10 @@ const storageOpenDatabase = () => {
     });
 };
 
+export const lyricsStorageLoad = (storageKey, storageFallback = '') => {
+    return localStorage.getItem(storageKey) ?? storageFallback;
+};
+
 export const lyricsStorageFileSave = async (key, fileBlob) => {
     const database = await storageOpenDatabase();
     const transaction = database.transaction(lyricsSettings.lyricsDatabaseStoreName, lyricsSettings.lyricsDatabaseReadWriteMode);
@@ -25,7 +25,7 @@ export const lyricsStorageFileSave = async (key, fileBlob) => {
 
 export const lyricsStorageFileLoad = async (key) => {
     const database = await storageOpenDatabase();
-    
+
     return new Promise((resolve) => {
         const request = database.transaction(lyricsSettings.lyricsDatabaseStoreName).objectStore(lyricsSettings.lyricsDatabaseStoreName).get(key);
 

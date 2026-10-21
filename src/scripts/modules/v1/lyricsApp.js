@@ -3,7 +3,7 @@ import { lyricsParsingParse } from './lyricsParsing';
 import { lyricsStorageLoad } from './lyricsStorage';
 import { lyricsParsingNormalize } from './lyricsParsing';
 import { lyricsRenderingCoreRender } from './lyricsRenderingCore';
-import { lyricsMediaRestoreAudioAsset, lyricsMediaRestoreBackgroundAsset, lyricsMediaRestoreIntroAsset } from './lyricsMedia';
+import { lyricsMediaRestoreAudioAsset, lyricsMediaRestoreBackgroundAsset, lyricsMediaRestoreIntroAsset, lyricsMediaUpdateRemoveButtonVisibility } from './lyricsMedia';
 
 export const lyricsAppInit = async () => {
     const elementTextareaLyrics = document.querySelector(lyricsSettings.elementSelectorTextareaLyrics);
@@ -30,6 +30,7 @@ export const lyricsAppInit = async () => {
     await lyricsMediaRestoreAudioAsset(elementAudioPlayer);
     await lyricsMediaRestoreBackgroundAsset(elementAudioPlayer);
     await lyricsMediaRestoreIntroAsset(elementInputIntro);
-    
+    lyricsMediaUpdateRemoveButtonVisibility();
+
     requestAnimationFrame(() => lyricsRenderingCoreRender(0, lyricsSettings.lyricsCanvasContext));
 };

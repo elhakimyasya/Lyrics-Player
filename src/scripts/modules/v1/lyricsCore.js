@@ -135,9 +135,9 @@ export const lyricsSettings = {
     lyricsRecordingAudioBitsPerSecond: 192000,
     lyricsRecordingButtonText: {
         idle: 'RECORD',
-        active: 'RECORDING...',
+        active: 'RECORDING',
     },
-    lyricsRecordingMissingAudioMessage: 'Silakan masukkan file audio terlebih dahulu.',
+    lyricsRecordingMissingAudioMessage: 'Please insert the audio file first.',
     lyricsRecordingChunkIntervalMs: 1000,
     lyricsRecordingManualCaptureFrameRate: 0,
     lyricsRecordingObjectUrlRevokeDelayMs: 60000,

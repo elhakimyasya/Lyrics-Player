@@ -55,9 +55,8 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
     const { introElement, introUrl, introIsVideo } = intro;
     lyricsSettings.lyricsStateIsRecordingIntro = true;
     lyricsSettings.lyricsRecordingIntroType = introIsVideo ? 'video' : 'audio';
-    if (!introIsVideo) {
-        lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
-    }
+    lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
+    lyricsSettings.lyricsOverlayCurrentOpacity = 0;
     let introFrameRequestID = null;
     const stopIntroFrameTimer = () => {
         if (introFrameRequestID) {
@@ -110,11 +109,46 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
         lyricsSettings.lyricsStateIsRecordingIntro = false;
         lyricsSettings.lyricsRecordingIntroType = null;
         lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
+        lyricsSettings.lyricsOverlayCurrentOpacity = 0;
         introElement.pause();
         introElement.remove();
         URL.revokeObjectURL(introUrl);
         recordingIntroStop = null;
     }
+};
+
+const recordingGetSupportedMimeType = () => lyricsSettings.lyricsRecordingMimeTypesWithCodecs.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+
+const recordingAddMediaTracks = (targetStream, mediaTracks) => {
+    mediaTracks.forEach((mediaTrack) => targetStream.addTrack(mediaTrack));
+};
+
+const recordingCreateAudioMediaStream = (audioElement) => {
+    const audioContext = recordingGetAudioContext();
+    const destination = audioContext.createMediaStreamDestination();
+    const sources = [];
+    const connectElement = (element) => {
+        const source = element === audioElement && lyricsSettings.lyricsAudioSource ? lyricsSettings.lyricsAudioSource : audioContext.createMediaElementSource(element);
+        source.connect(destination);
+        // The intro must be monitored while recording as well as captured.
+        if (element !== audioElement && element.tagName === 'AUDIO') {
+            source.connect(audioContext.destination);
+        }
+        sources.push(source);
+    };
+    connectElement(audioElement);
+
+    return {
+        stream: destination.stream,
+        addAudioElement: connectElement,
+        cleanup: () => sources.forEach((source) => {
+            try {
+                source.disconnect(destination);
+            } catch (errorEvent) {
+                console.error('Failed to disconnect recording audio stream:', errorEvent);
+            }
+        }),
+    };
 };
 
 export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
@@ -200,7 +234,8 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
 
         await recordingPlayIntro(recordingStream, exportCanvas, exportContext, intro);
         // Keep the intro's visual state for the first main frame; subsequent frames use normal timing effects.
-        lyricsSettings.lyricsRecordingMainTransitionPending = Boolean(intro);
+        // Overlay should start at 0 and fade in naturally with background
+        lyricsSettings.lyricsOverlayCurrentOpacity = 0;
         lyricsRenderingCoreRender(0, exportContext);
         lyricsSettings.lyricsRecordingMainTransitionPending = false;
         recordingMirrorPreview(exportCanvas, 0, true);
@@ -265,7 +300,7 @@ export const lyricsRecordingCreateCanvas = () => {
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = lyricsSettings.lyricsPreviewWidth;
     exportCanvas.height = lyricsSettings.lyricsPreviewHeight;
-    
+
     return exportCanvas;
 };
 
@@ -284,8 +319,6 @@ export const lyricsRecordingDownload = (recordingChunks) => {
     setTimeout(() => URL.revokeObjectURL(downloadUrl), lyricsSettings.lyricsRecordingObjectUrlRevokeDelayMs);
 };
 
-const recordingGetSupportedMimeType = () => lyricsSettings.lyricsRecordingMimeTypesWithCodecs.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
-
 export const lyricsRecordingCreateMediaRecorder = (stream) => {
     const supportedMimeType = recordingGetSupportedMimeType();
     const recorderOptions = {
@@ -298,40 +331,6 @@ export const lyricsRecordingCreateMediaRecorder = (stream) => {
     }
 
     return new MediaRecorder(stream, recorderOptions);
-};
-
-const recordingAddMediaTracks = (targetStream, mediaTracks) => {
-    mediaTracks.forEach((mediaTrack) => targetStream.addTrack(mediaTrack));
-};
-
-const recordingCreateAudioMediaStream = (audioElement) => {
-    const audioContext = recordingGetAudioContext();
-    const destination = audioContext.createMediaStreamDestination();
-    const sources = [];
-    const connectElement = (element) => {
-        const source = element === audioElement && lyricsSettings.lyricsAudioSource
-            ? lyricsSettings.lyricsAudioSource
-            : audioContext.createMediaElementSource(element);
-        source.connect(destination);
-        // The intro must be monitored while recording as well as captured.
-        if (element !== audioElement && element.tagName === 'AUDIO') {
-            source.connect(audioContext.destination);
-        }
-        sources.push(source);
-    };
-    connectElement(audioElement);
-
-    return {
-        stream: destination.stream,
-        addAudioElement: connectElement,
-        cleanup: () => sources.forEach((source) => {
-            try {
-                source.disconnect(destination);
-            } catch (errorEvent) {
-                console.error('Failed to disconnect recording audio stream:', errorEvent);
-            }
-        }),
-    };
 };
 
 export const lyricsRecordingCreateStream = (canvasElement, audioElement) => {

@@ -1,5 +1,9 @@
 import { lyricsSettings } from './lyricsCore';
 
+let mouseX = 0;
+let mouseY = 0;
+let isMouseOver = false;
+
 const renderingEffectsConvertHexColorToRgb = (hex) => ({
     r: parseInt(hex.slice(1, 3), lyricsSettings.lyricsHexColorRadix),
     g: parseInt(hex.slice(3, 5), lyricsSettings.lyricsHexColorRadix),
@@ -34,6 +38,42 @@ const renderingEffectsDrawResourceCover = (drawContext, resource, canvasWidth, c
     }
 
     drawContext.drawImage(element, offsetX, offsetY, drawWidth, drawHeight);
+};
+
+const renderingEffectsGetBackgroundTargetOpacity = (lineState) => {
+    if (!lineState.isEnding && !lineState.isCurrentInstrumental) {
+        return lyricsSettings.lyricsBackgroundMaxOpacity;
+    }
+
+    if (!lineState.isNextInstrumental && lineState.textNextRaw.trim() !== '' && lineState.timeUntilNextLine < lyricsSettings.lyricsBackgroundNextLinePreloadMs) {
+        return lyricsSettings.lyricsBackgroundMaxOpacity;
+    }
+
+    return 0;
+};
+
+const renderingEffectsConvertHexColorToRgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), lyricsSettings.lyricsHexColorRadix);
+    const g = parseInt(hex.slice(3, 5), lyricsSettings.lyricsHexColorRadix);
+    const b = parseInt(hex.slice(5, 7), lyricsSettings.lyricsHexColorRadix);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const renderingEffectsInitializeMouseTracking = (canvasElement) => {
+    if (!canvasElement || canvasElement._mouseTrackingSetup) return;
+
+    canvasElement.addEventListener('mousemove', (mouseMoveEvent) => {
+        const canvasBounds = canvasElement.getBoundingClientRect();
+        mouseX = (mouseMoveEvent.clientX - canvasBounds.left) / canvasBounds.width;
+        mouseY = (mouseMoveEvent.clientY - canvasBounds.top) / canvasBounds.height;
+        isMouseOver = true;
+    });
+
+    canvasElement.addEventListener('mouseleave', () => {
+        isMouseOver = false;
+    });
+
+    canvasElement._mouseTrackingSetup = true;
 };
 
 export const lyricsRenderingEffectsRenderBackground = (drawContext) => {
@@ -82,18 +122,6 @@ export const lyricsRenderingEffectsRenderBackgroundIntro = (drawContext) => {
     drawContext.restore();
 };
 
-const renderingEffectsGetBackgroundTargetOpacity = (lineState) => {
-    if (!lineState.isEnding && !lineState.isCurrentInstrumental) {
-        return lyricsSettings.lyricsBackgroundMaxOpacity;
-    }
-
-    if (!lineState.isNextInstrumental && lineState.textNextRaw.trim() !== '' && lineState.timeUntilNextLine < lyricsSettings.lyricsBackgroundNextLinePreloadMs) {
-        return lyricsSettings.lyricsBackgroundMaxOpacity;
-    }
-
-    return 0;
-};
-
 export const lyricsRenderingEffectsUpdateBackgroundOpacity = (lineState) => {
     if (lyricsSettings.lyricsStateIsRecording && lyricsSettings.lyricsRecordingMainTransitionPending) {
         lyricsSettings.lyricsBackgroundCurrentOpacity = lyricsSettings.lyricsBackgroundMaxOpacity;
@@ -130,7 +158,7 @@ export const lyricsRenderingEffectsEnsureBackgroundVideoPlaying = () => {
 
     videoElement.muted = true;
     videoElement.playsInline = true;
-    videoElement.play().catch(() => {});
+    videoElement.play().catch(() => { });
 };
 
 export const lyricsRenderingEffectsRenderAnalyzer = (audioElement) => {
@@ -155,34 +183,6 @@ export const lyricsRenderingEffectsRenderAnalyzer = (audioElement) => {
 
         lyricsSettings.lyricsAudioFrequencyData = new Uint8Array(lyricsSettings.lyricsAudioAnalyser.frequencyBinCount);
     }
-};
-
-const renderingEffectsConvertHexColorToRgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1, 3), lyricsSettings.lyricsHexColorRadix);
-    const g = parseInt(hex.slice(3, 5), lyricsSettings.lyricsHexColorRadix);
-    const b = parseInt(hex.slice(5, 7), lyricsSettings.lyricsHexColorRadix);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-let mouseX = 0;
-let mouseY = 0;
-let isMouseOver = false;
-
-const renderingEffectsInitializeMouseTracking = (canvasElement) => {
-    if (!canvasElement || canvasElement._mouseTrackingSetup) return;
-
-    canvasElement.addEventListener('mousemove', (mouseMoveEvent) => {
-        const canvasBounds = canvasElement.getBoundingClientRect();
-        mouseX = (mouseMoveEvent.clientX - canvasBounds.left) / canvasBounds.width;
-        mouseY = (mouseMoveEvent.clientY - canvasBounds.top) / canvasBounds.height;
-        isMouseOver = true;
-    });
-
-    canvasElement.addEventListener('mouseleave', () => {
-        isMouseOver = false;
-    });
-
-    canvasElement._mouseTrackingSetup = true;
 };
 
 export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {

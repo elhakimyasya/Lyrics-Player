@@ -1,6 +1,9 @@
 import { lyricsSettings } from './lyricsCore';
 import { lyricsRenderingCoreRender } from './lyricsRenderingCore';
 
+let idlePreviewRequestID = null;
+let lastRenderTime = 0;
+
 export const lyricsLoopsRenderCurrentFrame = (audioElement, drawContext) => {
     lyricsRenderingCoreRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, drawContext);
 };
@@ -8,8 +11,6 @@ export const lyricsLoopsRenderCurrentFrame = (audioElement, drawContext) => {
 export const lyricsLoopsRenderPreviewFrame = (audioElement) => {
     lyricsLoopsRenderCurrentFrame(audioElement, lyricsSettings.lyricsCanvasContext);
 };
-
-let idlePreviewRequestID = null;
 
 export const lyricsLoopsRenderPreviewFrameWhenIdle = (audioElement) => {
     if (lyricsSettings.lyricsStateIsPlaying || idlePreviewRequestID) {
@@ -48,8 +49,6 @@ export const lyricsLoopsStopPreviewLoop = () => {
     lyricsSettings.lyricsStateIsPlaying = false;
 };
 
-let lastRenderTime = 0;
-
 export const lyricsLoopsRenderLoop = () => {
     const audioPlayerElement = document.querySelector(lyricsSettings.elementSelectorAudio);
     if (!audioPlayerElement || !lyricsSettings.lyricsStateIsPlaying) {
@@ -67,7 +66,7 @@ export const lyricsLoopsRenderLoop = () => {
     }
 
     lastRenderTime = currentTimeMilliseconds;
-    
+
     lyricsRenderingCoreRender(audioPlayerElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, lyricsSettings.lyricsCanvasContext);
 
     lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsLoopsRenderLoop);

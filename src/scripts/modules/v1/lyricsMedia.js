@@ -12,6 +12,18 @@ const mediaRevokeCurrentBackgroundObjectUrl = () => {
     }
 };
 
+export const lyricsMediaUpdateRemoveButtonVisibility = () => {
+    const audioElement = document.querySelector(lyricsSettings.elementSelectorAudio);
+    const buttonRemoveAudio = document.querySelector(lyricsSettings.elementSelectorButtonRemoveAudio);
+    const buttonRemoveBackground = document.querySelector(lyricsSettings.elementSelectorButtonRemoveBackground);
+    const buttonRemoveIntro = document.querySelector(lyricsSettings.elementSelectorButtonRemoveIntro);
+    const inputIntro = document.querySelector(lyricsSettings.elementSelectorInputIntro);
+
+    buttonRemoveAudio?.classList.toggle('hidden', !audioElement.src);
+    buttonRemoveBackground?.classList.toggle('hidden', !lyricsSettings.lyricsResourceBackground);
+    buttonRemoveIntro?.classList.toggle('hidden', !(inputIntro?.files?.length > 0));
+};
+
 export const lyricsMediaCreateBackgroundResource = (backgroundUrl, backgroundType, onReady) => {
     if (backgroundType === lyricsSettings.lyricsMediaTypes.image) {
         const imageElement = new Image();
@@ -96,6 +108,7 @@ export const lyricsMediaRemoveAudioAsset = async (audioElement) => {
     audioElement.load();
     const inputElement = document.querySelector(lyricsSettings.elementSelectorInputAudio);
     if (inputElement) inputElement.value = '';
+    lyricsMediaUpdateRemoveButtonVisibility();
 };
 
 export const lyricsMediaRemoveBackgroundAsset = async (audioElement) => {
@@ -106,12 +119,14 @@ export const lyricsMediaRemoveBackgroundAsset = async (audioElement) => {
     const inputElement = document.querySelector(lyricsSettings.elementSelectorInputBackground);
     if (inputElement) inputElement.value = '';
     lyricsLoopsRenderPreviewFrame(audioElement);
+    lyricsMediaUpdateRemoveButtonVisibility();
 };
 
 export const lyricsMediaRemoveIntroAsset = async () => {
     await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.intro, null);
     const inputElement = document.querySelector(lyricsSettings.elementSelectorInputIntro);
     if (inputElement) inputElement.value = '';
+    lyricsMediaUpdateRemoveButtonVisibility();
 };
 
 export const lyricsMediaHandleAudioFileChange = async (inputEvent, audioElement) => {
@@ -128,6 +143,7 @@ export const lyricsMediaHandleAudioFileChange = async (inputEvent, audioElement)
     lyricsRenderingEffectsRenderAnalyzer(audioElement);
 
     lyricsSettings.lyricsExportFileName = audioFile.name.replace(/\.[^/.]+$/, '');
+    lyricsMediaUpdateRemoveButtonVisibility();
 };
 
 export const lyricsMediaHandleIntroFileChange = async (inputEvent) => {
@@ -138,6 +154,7 @@ export const lyricsMediaHandleIntroFileChange = async (inputEvent) => {
 
     try {
         await lyricsStorageFileSave(lyricsSettings.lyricsPersistenceKeys.intro, introFile);
+        lyricsMediaUpdateRemoveButtonVisibility();
     } catch (errorEvent) {
         console.warn('Failed to save intro file:', errorEvent);
     }
@@ -159,6 +176,7 @@ export const lyricsMediaHandleBackgroundFileChange = async (inputEvent, audioEle
 
     lyricsMediaCreateBackgroundResource(URL.createObjectURL(backgroundFile), backgroundType, () => {
         lyricsLoopsRenderPreviewFrame(audioElement);
+        lyricsMediaUpdateRemoveButtonVisibility();
     });
 };
 

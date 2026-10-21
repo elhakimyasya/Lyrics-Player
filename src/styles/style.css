@@ -8,38 +8,22 @@
     --shadow-2dp: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
     --shadow-4dp: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
     --shadow-6dp: 0 3px 5px -1px rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12);
+
+    --color-key: light-dark(#2563eb, #2563eb);
+    --color-background: light-dark(#09090b, #09090b);
+    --color-foreground: light-dark(#18181b, #18181b);
+    --color-text: light-dark(#e4e4e7, #e4e4e7);
+    --color-meta: light-dark(#9f9fa9, #9f9fa9);
+    --color-border: light-dark(#27272a, #27272a);
+
+    --color-red: light-dark(#ef4444, #ef4444);
+    --color-emerald: light-dark(#10b981, #10b981);
+    --color-teal: light-dark(#14b8a6, #14b8a6);
+    --color-cyan: light-dark(#06b6d4, #06b6d4);
+    --color-sky: light-dark(#0ea5e9, #0ea5e9);
+    --color-indigo: light-dark(#6366f1, #6366f1);
 }
 
-input[type='file']::file-selector-button {
-    @apply mr-4 cursor-pointer rounded-lg border-0 px-2 py-2 text-xs font-bold text-white uppercase;
-    background: #2563eb;
-}
-
-.glass-card {
-    @apply border border-gray-600;
-}
-
-.custom-scroll::-webkit-scrollbar {
-    @apply w-1;
-}
-.custom-scroll::-webkit-scrollbar-track {
-    background: #18181b;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-    @apply rounded-lg;
-    background: #3f3f46;
-}
-
-/* Animasi pulse lembut untuk area preview */
-@keyframes glow {
-    0%,
-    100% {
-        border-color: rgba(59, 130, 246, 0.5);
-    }
-    50% {
-        border-color: rgba(59, 130, 246, 0.2);
-    }
-}
-.preview-glow {
-    animation: glow 3s infinite;
+.dark {
+    @apply scheme-dark;
 }

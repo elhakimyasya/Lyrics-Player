@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,120 +12,147 @@
         <link rel="stylesheet" href=".././dist/styles/style.min.css" />
     </head>
 
-    <body class="flex min-h-screen flex-col items-center bg-[#09090b] p-4 text-zinc-200 lg:p-10">
-        <div class="w-full max-w-6xl">
+    <body class="bg-background text-text flex min-h-screen flex-col items-center p-4 lg:p-10">
+        <div class="w-full max-w-7xl">
             <header class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
                 <div>
-                    <span class="text-xs font-bold uppercase text-blue-500">Audio Visualizer</span>
-                    <h1 class="mt-1 text-4xl font-extrabold text-white">LYRICS<span class="text-zinc-400">PLAYER</span></h1>
+                    <span class="text-key text-xs font-bold uppercase">Audio Visualizer</span>
+                    <h1 class="text-text mt-1 text-4xl font-extrabold">LYRICS<span class="text-meta">PLAYER</span></h1>
                 </div>
+
                 <div class="flex gap-2">
-                    <div class="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase text-blue-400">Stable v2.0</div>
+                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">Stable v2.0</div>
                 </div>
             </header>
 
-            <main class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                <div class="flex flex-col gap-6 lg:col-span-5">
-                    <div class="rounded-2xl border border-zinc-800 p-4 shadow-2xl">
-                        <h2 class="mb-4 flex items-center gap-2 text-xs font-bold uppercase text-zinc-400"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span> Media Assets</h2>
-                        <div class="space-y-4">
-                            <label class="block">
-                                <span class="mb-1.5 ml-1 block text-[11px] font-semibold text-zinc-400">AUDIO SOURCE</span>
-                                <input id="element_input_audio" class="element_input_audio block w-full cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/50 p-2 text-xs text-zinc-400 outline-none transition-all focus:ring-1 focus:ring-blue-500" type="file" accept="audio/*" />
-                            </label>
+            <main class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                <div class="order-2 flex flex-col gap-4 lg:order-none lg:col-span-3">
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-emerald h-2 w-2 rounded-full"></span> Lyrics</h2>
 
-                            <label class="block">
-                                <span class="mb-1.5 ml-1 block text-[11px] font-semibold text-zinc-400">BACKGROUND (IMG/VID)</span>
-                                <input id="element_input_background" class="element_input_background block w-full cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/50 p-2 text-xs text-zinc-400 outline-none transition-all focus:ring-1 focus:ring-blue-500" type="file" accept="image/*,video/*" />
-                            </label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-meta font-mono text-xs">Offset:</span>
 
-                            <div class="grid grid-cols-3 gap-4 border-t border-zinc-800/50 pt-2">
-                                <label class="block">
-                                    <span class="mb-1.5 ml-1 block text-[10px] font-bold uppercase text-zinc-500">BACKGROUND COLOR</span>
-                                    <div class="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
-                                        <input id="element_input_bg_color" type="color" value="#000000" class="h-6 w-10 cursor-pointer border-none bg-transparent" />
-                                        <span class="font-mono text-[10px] text-zinc-400">HEX</span>
-                                    </div>
-                                </label>
-                                <label class="block">
-                                    <span class="mb-1.5 ml-1 block text-[10px] font-bold uppercase text-zinc-500">Key Color</span>
-                                    <div class="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
-                                        <input id="element_input_key_color" type="color" value="#ffde59" class="h-6 w-10 cursor-pointer border-none bg-transparent" />
-                                        <span class="font-mono text-[10px] text-zinc-400">HEX</span>
-                                    </div>
-                                </label>
-                                <label class="block">
-                                    <span class="mb-1.5 ml-1 block text-[10px] font-bold uppercase text-zinc-500">Text Color</span>
-                                    <div class="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
-                                        <input id="element_input_non_active_text_color" type="color" value="#ffffff" class="h-6 w-10 cursor-pointer border-none bg-transparent" />
-                                        <span class="font-mono text-[10px] text-zinc-400">HEX</span>
-                                    </div>
-                                </label>
+                                <input id="element_input_offset" type="number" value="0.0" step="0.1" class="element_input_offset focus:border-emerald text-emerald border-border bg-foreground w-16 rounded border px-2 py-0.5 font-mono text-xs outline-none" />
                             </div>
                         </div>
+
+                        <textarea id="element_textarea_lyrics" class="element_textarea_lyrics border-border focus:border-emerald focus:ring-emerald/10 bg-foreground text-emerald h-80 w-full rounded-xl border p-4 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Lyrics"></textarea>
                     </div>
 
-                    <div class="flex-grow rounded-2xl border border-zinc-800 p-4 shadow-2xl">
-                        <div class="mb-4 flex items-center justify-between">
-                            <h2 class="flex items-center gap-2 text-xs font-bold uppercase text-zinc-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Lyrics Editor</h2>
-                            <div class="flex items-center gap-2">
-                                <span class="font-mono text-[10px] italic text-zinc-400">Offset:</span>
-                                <input id="element_input_offset" type="number" value="0.0" step="0.1" class="element_input_offset w-16 rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-mono text-xs text-blue-400 outline-none focus:border-blue-500" />
-                            </div>
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-teal h-2 w-2 rounded-full"></span> Header</h2>
                         </div>
-                        <textarea id="element_textarea_lyrics" class="element_textarea_lyrics custom-scroll h-80 w-full rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 font-mono text-[13px] leading-relaxed text-emerald-400/80 outline-none transition-all focus:ring-2 focus:ring-emerald-500/10" placeholder="[00:00.00] Enter LRC format lyrics..."></textarea>
+
+                        <textarea id="element_textarea_header" class="element_textarea_header border-border focus:border-teal focus:ring-teal/10 bg-foreground text-teal h-25 w-full rounded-xl border p-4 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Header Text"></textarea>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-cyan h-2 w-2 rounded-full"></span> Footer</h2>
+                        </div>
+
+                        <textarea id="element_textarea_footer" class="element_textarea_footer border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan h-25 w-full rounded-xl border p-4 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Footer Text"></textarea>
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-6 lg:col-span-7">
-                    <div class="preview-glow overflow-hidden rounded-3xl border border-blue-500/20 p-2 shadow-2xl">
-                        <div class="group relative aspect-video w-full overflow-hidden rounded-[1.25rem] bg-black">
+                <div class="order-1 flex flex-col gap-4 lg:order-none lg:col-span-6">
+                    <div class="border-key overflow-hidden rounded-2xl border shadow-2xl">
+                        <div class="bg-background group relative aspect-video w-full overflow-hidden">
                             <canvas id="element_canvas_preview" class="element_canvas_preview block h-full w-full object-cover" width="1920" height="1080"></canvas>
 
                             <div id="bgContainer" class="hidden" aria-hidden="true"></div>
-
-                            <div class="pointer-events-none absolute left-4 top-4">
-                                <div class="mb-4 flex items-center gap-2 rounded-md border border-white/10 bg-black/40 px-3 py-1 text-[10px] text-xs font-bold uppercase text-zinc-400 backdrop-blur-md"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span> Live Preview</div>
-                            </div>
                         </div>
                     </div>
 
-                    <div class="element_container_controll hidden flex-col items-center gap-4 rounded-2xl border border-zinc-800 p-4 md:flex-row">
+                    <div class="element_container_controll border-border hidden flex-col items-center gap-4 rounded-2xl border p-4 md:flex-row">
                         <div class="w-full md:flex-grow">
-                            <audio id="element_audio" class="element_audio h-10 w-full accent-blue-500" controls></audio>
+                            <audio id="element_audio" class="element_audio accent-key h-10 w-full" controls></audio>
                         </div>
+
                         <div id="playerControls" class="grid w-full shrink-0 grid-cols-2 gap-4">
-                            <button id="element_button_fullscreen" type="button" class="element_button_fullscreen cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-5 py-2.5 text-xs font-bold text-white transition-transform hover:bg-zinc-700 active:scale-95">FULLSCREEN</button>
-                            <button id="element_button_export" type="button" class="element_button_export cursor-pointer rounded-lg border border-blue-400/30 bg-blue-600 px-8 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-95">RECORD</button>
+                            <button id="element_button_fullscreen" type="button" class="element_button_fullscreen text-text border-border hover:bg-border bg-border cursor-pointer rounded-lg border px-5 py-2.5 text-xs font-bold transition-transform active:scale-95">FULLSCREEN</button>
+
+                            <button id="element_button_export" type="button" class="element_button_export text-text hover:bg-key shadow-key/20 border-key/30 bg-key cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RECORD</button>
                         </div>
                     </div>
+                </div>
 
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div class="rounded-2xl border border-zinc-800 p-4">
-                            <span class="mb-3 block text-[11px] font-bold uppercase text-zinc-400">Overlay Header</span>
-                            <textarea id="element_textarea_header" class="element_textarea_header h-20 w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-xs outline-none transition-all focus:border-blue-500" placeholder="Header text..."></textarea>
+                <div class="order-3 flex flex-col gap-4 lg:order-none lg:col-span-3">
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-sky h-2 w-2 rounded-full"></span> Media</h2>
                         </div>
-                        <div class="rounded-2xl border border-zinc-800 p-4">
-                            <span class="mb-3 block text-[11px] font-bold uppercase text-zinc-400">Overlay Footer</span>
-                            <textarea id="element_textarea_footer" class="element_textarea_footer h-20 w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-xs outline-none transition-all focus:border-blue-500" placeholder="Footer text..."></textarea>
-                        </div>
-                    </div>
 
-                    <div class="flex items-center justify-between rounded-2xl border border-zinc-800 p-4 px-6">
-                        <div class="flex flex-col">
-                            <span class="text-xs font-bold uppercase text-white">Audio Visualizer</span>
-                            <span class="text-[10px] text-zinc-400">Enable real-time wave spectrum on canvas</span>
-                        </div>
-                        <label class="relative inline-flex cursor-pointer items-center">
-                            <input id="element_input_spectrum" type="checkbox" class="element_input_spectrum peer sr-only" checked />
-                            <div class="peer h-6 w-11 rounded-full bg-zinc-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
+                        <label class="block cursor-pointer space-y-2">
+                            <span class="text-meta block text-xs font-semibold">Audio</span>
+
+                            <input id="element_input_audio" class="element_input_audio border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan file:bg-cyan file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
                         </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <span class="text-meta block text-xs font-semibold">Background (Image / Video)</span>
+
+                            <input id="element_input_background" class="element_input_background border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan file:bg-cyan file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
+                        </label>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-indigo h-2 w-2 rounded-full"></span> Colors</h2>
+                        </div>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <span class="text-meta block text-xs font-semibold">Background Color</span>
+
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                <input id="element_input_bg_color" type="color" value="#000000" class="h-6 w-6 cursor-pointer border-none bg-transparent" />
+
+                                <span class="font-mono text-xs">HEX</span>
+                            </div>
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <span class="text-meta block text-xs font-semibold">Key Color</span>
+
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                <input id="element_input_key_color" type="color" value="#ffde59" class="h-6 w-6 cursor-pointer border-none bg-transparent" />
+
+                                <span class="font-mono text-xs">HEX</span>
+                            </div>
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <span class="text-meta block text-xs font-semibold">Text Color</span>
+
+                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-indigo flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                <input id="element_input_non_active_text_color" type="color" value="#ffffff" class="h-6 w-6 cursor-pointer border-none bg-transparent" />
+
+                                <span class="font-mono text-xs">HEX</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex w-full flex-row items-center justify-between gap-4">
+                            <div class="flex flex-col space-y-1">
+                                <span class="text-text text-xs font-bold uppercase">Audio Visualizer</span>
+                                <span class="text-meta text-xs">Enable real-time wave spectrum on canvas</span>
+                            </div>
+
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input id="element_input_spectrum" type="checkbox" class="element_input_spectrum peer sr-only" checked />
+                                <div class="peer-checked:after:border-text bg-foreground peer-checked:bg-key after:border-text after:bg-text peer h-6 w-11 rounded-full after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-focus:outline-none"></div>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </main>
 
             <footer class="mb-8 mt-12 text-center">
-                <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-600">Engineered for Creators &bull; &copy; 2026</p>
+                <p class="text-xs font-bold uppercase tracking-[0.4em] text-zinc-600">Lyrics Player | Yasya El Hakim</p>
             </footer>
         </div>
 

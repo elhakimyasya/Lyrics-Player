@@ -1,4 +1,4 @@
-const lyricsDefaultBgColor = '#000000';
+const lyricsDefaultBackgroundColor = '#000000';
 const lyricsDefaultKeyColor = '#ffde59';
 const lyricsDefaultNonActiveTextColor = '#ffffff';
 
@@ -6,10 +6,12 @@ const lyricsStorageKeys = {
     lyricsText: 'lyrics_textarea',
     lyricsHeader: 'lyrics_header',
     lyricsFooter: 'lyrics_footer',
+    headerTemplates: 'lyrics_header_templates',
+    footerTemplates: 'lyrics_footer_templates',
     lyricsOffset: 'lyrics_offset',
-    bgColor: 'lyricsBgColor',
-    keyColor: 'lyricsKeyColor',
-    nonActiveTextColor: 'lyricsNonActiveTextColor',
+    colorBackground: 'lyricsBgColor',
+    colorKey: 'lyricsKeyColor',
+    colorText: 'lyricsNonActiveTextColor',
 };
 
 export const lyricsSettings = {
@@ -18,6 +20,10 @@ export const lyricsSettings = {
     elementSelectorInputOffset: '.element_input_offset',
     elementSelectorInputBackground: '.element_input_background',
     elementSelectorInputSpectrum: '.element_input_spectrum',
+    elementSelectorInputIntro: '.element_input_intro',
+    elementSelectorButtonRemoveAudio: '.element_button_remove_audio',
+    elementSelectorButtonRemoveBackground: '.element_button_remove_background',
+    elementSelectorButtonRemoveIntro: '.element_button_remove_intro',
     elementSelectorTextareaLyrics: '.element_textarea_lyrics',
     elementSelectorTextareaHeader: '.element_textarea_header',
     elementSelectorTextareaFooter: '.element_textarea_footer',
@@ -26,14 +32,17 @@ export const lyricsSettings = {
     elementSelectorAudio: '.element_audio',
     elementSelectorContainerControl: '.element_container_controll',
     elementSelectorCanvas: '.element_canvas_preview',
-    elementSelectorBgColor: '#element_input_bg_color',
-    elementSelectorKeyColor: '#element_input_key_color',
-    elementSelectorNonActiveTextColor: '#element_input_non_active_text_color',
+    elementSelectorColorBackground: '.element_input_bg_color',
+    elementSelectorColorKey: '.element_input_key_color',
+    elementSelectorColorText: '.element_input_text_color',
 
-    // State & Data
     lyricsDataParsed: [],
     lyricsStateIsPlaying: false,
     lyricsStateIsRecording: false,
+    lyricsStateIsRecordingIntro: false,
+    lyricsRecordingIntroType: null,
+    lyricsRecordingMainTransitionPending: false,
+    lyricsRecordingMediaRecorder: null,
     lyricsStateRenderSpectrum: true,
     lyricsResourceBackground: null,
     lyricsAnimationRequestID: null,
@@ -64,17 +73,18 @@ export const lyricsSettings = {
     lyricsFontFace: 'Nexa Black',
     lyricsInstrumentalSymbol: '♪',
     lyricsExportFileName: 'lyrics-export',
-    lyricsHeaderFirstRender: true,
-    lyricsBackgroundCurrentOpacity: 0.9,
+    lyricsBackgroundCurrentOpacity: 0,
+    lyricsOverlayCurrentOpacity: 0,
     lyricsFadeSpeed: 0.01,
 
     // Storage Config
     lyricsStorageKeys,
-    lyricsDefaultLyrics: '[00:00.00] Intro\n[00:05.00] Lirik Baris Pertama',
+    lyricsDefaultLyrics: '',
     lyricsDefaultOffset: '0',
     lyricsPersistenceKeys: {
         audio: 'persistent_audio_file',
         background: 'persistent_bg_file',
+        intro: 'persistent_intro_file',
         bgType: 'persistent_bg_type',
     },
     lyricsDatabaseName: 'LyricsAppDB',
@@ -83,16 +93,16 @@ export const lyricsSettings = {
     lyricsDatabaseReadWriteMode: 'readwrite',
 
     // Color Config
-    lyricsDefaultBgColor,
+    lyricsDefaultBackgroundColor,
     lyricsDefaultKeyColor,
     lyricsDefaultNonActiveTextColor,
-    lyricsBgColor: localStorage.getItem(lyricsStorageKeys.bgColor) || lyricsDefaultBgColor,
-    lyricsKeyColor: localStorage.getItem(lyricsStorageKeys.keyColor) || lyricsDefaultKeyColor,
-    lyricsNonActiveTextColor: localStorage.getItem(lyricsStorageKeys.nonActiveTextColor) || lyricsDefaultNonActiveTextColor,
+    lyricsBgColor: localStorage.getItem(lyricsStorageKeys.colorBackground) || lyricsDefaultBackgroundColor,
+    lyricsKeyColor: localStorage.getItem(lyricsStorageKeys.colorKey) || lyricsDefaultKeyColor,
+    lyricsNonActiveTextColor: localStorage.getItem(lyricsStorageKeys.colorText) || lyricsDefaultNonActiveTextColor,
     lyricsColorSettingKeys: {
-        bgColor: 'lyricsBgColor',
-        keyColor: 'lyricsKeyColor',
-        nonActiveTextColor: 'lyricsNonActiveTextColor',
+        colorBackground: 'lyricsBgColor',
+        colorKey: 'lyricsKeyColor',
+        colorText: 'lyricsNonActiveTextColor',
     },
 
     // Media Config
@@ -102,7 +112,7 @@ export const lyricsSettings = {
     },
     lyricsVideoElementTag: 'video',
     lyricsImageMimePrefix: 'image/',
-    lyricsBlobUrlPrefix: 'blob:',
+    lyricsBlobUrlPrefix: 'fileBlob:',
 
     // Audio Config
     lyricsAudioReadyStateCanPlay: 2,
@@ -166,4 +176,9 @@ export const lyricsSettings = {
     lyricsSpectrumGradientEndAlpha: 0.9,
     lyricsSpectrumInteractiveBoost: 0.3,
     lyricsSpectrumEdgeScale: 0.98,
+};
+
+export const lyricsCoreGetCanvasContext = () => {
+    const elementCanvas = document.querySelector(lyricsSettings.elementSelectorCanvas);
+    return elementCanvas.getContext(lyricsSettings.lyricsCanvasContextType, lyricsSettings.lyricsCanvasContextOptions);
 };

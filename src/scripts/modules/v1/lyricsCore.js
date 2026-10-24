@@ -12,6 +12,8 @@ const lyricsStorageKeys = {
     colorBackground: 'lyricsBgColor',
     colorKey: 'lyricsKeyColor',
     colorText: 'lyricsNonActiveTextColor',
+    displayVersion: 'lyrics_display_version',
+    lineBaseYRatio: 'lyrics_line_base_y_ratio',
 };
 
 export const lyricsSettings = {
@@ -20,6 +22,7 @@ export const lyricsSettings = {
     elementSelectorInputOffset: '.element_input_offset',
     elementSelectorInputBackground: '.element_input_background',
     elementSelectorInputSpectrum: '.element_input_spectrum',
+    elementSelectorRadioDisplayVersion: '.element_input_display_version',
     elementSelectorInputIntro: '.element_input_intro',
     elementSelectorButtonRemoveAudio: '.element_button_remove_audio',
     elementSelectorButtonRemoveBackground: '.element_button_remove_background',
@@ -162,10 +165,16 @@ export const lyricsSettings = {
     // Lyrics Render Config
     lyricsLineFontSize: 82,
     lyricsLineSpacing: 120,
-    lyricsLineBaseYRatio: 0.55,
+    lyricsLineBaseYRatio: parseFloat(localStorage.getItem(lyricsStorageKeys.lineBaseYRatio)) || 0.57,
     lyricsInactiveLineOpacity: 0.5,
     lyricsPreviousLineFadeOutMs: 200,
     lyricsNextLineFadeInMs: 1000,
+
+    // Display Version
+    lyricsDisplayVersion: localStorage.getItem(lyricsStorageKeys.displayVersion) || 'dual',
+    lyricsDisplayVersions: ['dual', 'triple'],
+    lyricsTripleShiftDurationMs: 500,
+    lyricsTripleFadeDurationMs: 450,
 
     // Spectrum Render Config
     lyricsSpectrumBarsCount: 80,

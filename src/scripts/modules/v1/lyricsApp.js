@@ -25,6 +25,21 @@ export const lyricsAppInit = async () => {
     elementInputColorKey.value = lyricsSettings.lyricsKeyColor;
     elementInputColorText.value = lyricsSettings.lyricsNonActiveTextColor;
     elementInputSpectrum.checked = lyricsSettings.lyricsStateRenderSpectrum;
+
+    // Restore saved lineBaseYRatio
+    const savedBaseYRatio = lyricsStorageLoad(lyricsSettings.lyricsStorageKeys.lineBaseYRatio, '');
+    if (savedBaseYRatio !== '') {
+        const parsed = parseFloat(savedBaseYRatio);
+        if (!Number.isNaN(parsed)) {
+            lyricsSettings.lyricsLineBaseYRatio = parsed;
+        }
+    }
+
+    // Set display version radio state
+    document.querySelectorAll(lyricsSettings.elementSelectorRadioDisplayVersion).forEach((radioInput) => {
+        radioInput.checked = radioInput.value === lyricsSettings.lyricsDisplayVersion;
+    });
+
     lyricsSettings.lyricsDataParsed = lyricsParsingParse(elementTextareaLyrics.value);
 
     await lyricsMediaRestoreAudioAsset(elementAudioPlayer);

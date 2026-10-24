@@ -163,6 +163,50 @@ export const lyricsRenderingCoreGetRenderLineState = (adjustedRenderTime, audioE
     };
 };
 
+const renderingCoreGetTripleShiftDuration = (lineState) => {
+    const lineDuration = Math.max(1, lineState.currentLineEnd - lineState.currentLineStart);
+    return Math.min(
+        lyricsSettings.lyricsTripleShiftDurationMs,
+        Math.max(200, Math.round(lineDuration * 0.55))
+    );
+};
+
+const renderingCoreGetTripleShiftOffset = (lineState, adjustedRenderTime) => {
+    const elapsed = adjustedRenderTime - lineState.currentLineStart;
+    const shiftDuration = renderingCoreGetTripleShiftDuration(lineState);
+    if (elapsed >= shiftDuration) return 1;
+    const t = Math.max(0, elapsed / shiftDuration);
+    return 0.5 - 0.5 * Math.cos(t * Math.PI);
+};
+
+// Prev (top) fades out and next (bottom) fades in together — one shared
+// fade duration, symmetric, running concurrently.
+const renderingCoreGetTriplePrevNextAlpha = (lineState, adjustedRenderTime) => {
+    const elapsed = adjustedRenderTime - lineState.currentLineStart;
+    const fadeDuration = Math.max(200, Math.round(renderingCoreGetTripleShiftDuration(lineState) * 0.8));
+    const t = Math.min(1, Math.max(0, elapsed / fadeDuration));
+    const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
+
+    return {
+        prevAlpha: (1 - eased) * lyricsSettings.lyricsInactiveLineOpacity,
+        nextAlpha: eased * lyricsSettings.lyricsInactiveLineOpacity,
+    };
+};
+
+// During an instrumental line the whole triple block fades out; when the next
+// regular line starts it fades back in.
+const renderingCoreGetTripleVisibility = (lineState, adjustedRenderTime) => {
+    const fadeDuration = lyricsSettings.lyricsTripleFadeDurationMs;
+    const elapsed = adjustedRenderTime - lineState.currentLineStart;
+    if (lineState.isCurrentInstrumental) {
+        return Math.max(0, 1 - elapsed / fadeDuration);
+    }
+    if (lineState.isPreviousInstrumental) {
+        return Math.min(1, elapsed / fadeDuration);
+    }
+    return 1;
+};
+
 export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adjustedRenderTime) => {
     if (lineState.totalLines === 0) {
         return;
@@ -170,12 +214,56 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
 
     const animationProgress = renderingCoreGetAnimationProgress(lineState, adjustedRenderTime);
     const lineSpacing = lyricsSettings.lyricsLineSpacing;
-    const yBase = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsLineBaseYRatio;
-    const scroll = animationProgress * lineSpacing;
     const centerX = lyricsSettings.lyricsPreviewWidth / 2;
 
     drawContext.textAlign = 'center';
     drawContext.textBaseline = 'middle';
+
+    if (lyricsSettings.lyricsDisplayVersion === 'triple') {
+        // Active line is always at height/2 (truly centered), independent of baseYRatio.
+        // At the start of a new line the block is offset by lineSpacing (lines are one
+        // spacing lower) and eases up to zero over lyricsTripleShiftDurationMs.
+        const centerY = lyricsSettings.lyricsPreviewHeight / 2;
+        const shiftFactor = renderingCoreGetTripleShiftOffset(lineState, adjustedRenderTime);
+        const shiftOffset = (1 - shiftFactor) * lineSpacing;
+        const visibility = renderingCoreGetTripleVisibility(lineState, adjustedRenderTime);
+
+        // Prev and next fade out/in together, symmetrically.
+        const { prevAlpha, nextAlpha } = renderingCoreGetTriplePrevNextAlpha(lineState, adjustedRenderTime);
+
+        // Top line: fades out while the block shifts up
+        lyricsRenderingCoreRenderTextLine(drawContext, {
+            text: lineState.textPrevious,
+            x: centerX,
+            y: centerY - lineSpacing + shiftOffset,
+            color: lyricsSettings.lyricsNonActiveTextColor,
+            alpha: prevAlpha * visibility,
+        });
+
+        // Active line: immediately solid key color, no fade
+        lyricsRenderingCoreRenderTextLine(drawContext, {
+            text: lineState.textActive,
+            x: centerX,
+            y: centerY + shiftOffset,
+            color: lyricsSettings.lyricsKeyColor,
+            alpha: visibility,
+        });
+
+        // Bottom line: fades in while the block shifts up
+        lyricsRenderingCoreRenderTextLine(drawContext, {
+            text: lineState.textNext,
+            x: centerX,
+            y: centerY + lineSpacing + shiftOffset,
+            color: lyricsSettings.lyricsNonActiveTextColor,
+            alpha: nextAlpha * visibility,
+        });
+
+        return;
+    }
+
+    // Dual mode (default)
+    const yBase = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsLineBaseYRatio;
+    const scroll = animationProgress * lineSpacing;
 
     lyricsRenderingCoreRenderTextLine(drawContext, {
         text: lineState.textPrevious,

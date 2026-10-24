@@ -127,6 +127,17 @@ export const lyricsEventsBindControl = () => {
 
         lyricsLoopsRenderPreviewFrameWhenIdle(document.querySelector(lyricsSettings.elementSelectorAudio));
     });
+
+    // Display version radio buttons — auto-saved on change
+    document.querySelectorAll(lyricsSettings.elementSelectorRadioDisplayVersion).forEach((radioInput) => {
+        radioInput.addEventListener('change', (radioEvent) => {
+            if (radioEvent.target.checked) {
+                lyricsSettings.lyricsDisplayVersion = radioEvent.target.value;
+                lyricsStorageSave(lyricsSettings.lyricsStorageKeys.displayVersion, radioEvent.target.value);
+                lyricsLoopsRenderPreviewFrameWhenIdle(document.querySelector(lyricsSettings.elementSelectorAudio));
+            }
+        });
+    });
 };
 
 export const lyricsEventsBindPlayer = () => {

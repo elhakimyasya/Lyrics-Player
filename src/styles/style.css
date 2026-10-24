@@ -22,6 +22,7 @@
     --color-cyan: light-dark(#06b6d4, #06b6d4);
     --color-sky: light-dark(#0ea5e9, #0ea5e9);
     --color-indigo: light-dark(#6366f1, #6366f1);
+    --color-violet: light-dark(#8b5cf6, #8b5cf6);
 }
 
 .dark {

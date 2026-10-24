@@ -91,7 +91,7 @@
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Audio</span>
 
-                            <button type="button" class="element_button_remove_audio hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            <button type="button" class="element_button_remove_audio text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
                         <input class="element_input_audio border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
@@ -100,7 +100,7 @@
                     <label class="block cursor-pointer space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Background (Image / Video)</span>
-                            <button type="button" class="element_button_remove_background hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            <button type="button" class="element_button_remove_background text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
                         <input class="element_input_background border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
@@ -109,7 +109,7 @@
                     <label class="block cursor-pointer space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-meta block text-xs font-semibold">Intro (Audio / Video)</span>
-                            <button type="button" class="element_button_remove_intro hidden text-red cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            <button type="button" class="element_button_remove_intro text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
                         </div>
 
                         <input class="element_input_intro border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*,video/*" />
@@ -162,6 +162,30 @@
                             <label class="relative inline-flex cursor-pointer items-center">
                                 <input type="checkbox" class="element_input_spectrum peer sr-only" checked />
                                 <div class="peer-checked:after:border-text bg-foreground peer-checked:bg-key after:border-text after:bg-text peer h-6 w-11 rounded-full after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-focus:outline-none"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-violet h-2 w-2 rounded-full"></span> Display</h2>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="border-border hover:border-violet hover:ring-violet/10 bg-foreground flex cursor-pointer items-center gap-2 rounded-xl border p-2.5 text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                <input type="radio" name="element_input_display_version" value="dual" class="element_input_display_version accent-violet h-3.5 w-3.5" checked />
+                                <div>
+                                    <span class="block text-xs font-bold">Dual</span>
+                                    <span class="text-meta block text-xs">Active + Next · smooth scroll</span>
+                                </div>
+                            </label>
+
+                            <label class="border-border hover:border-violet hover:ring-violet/10 bg-foreground flex cursor-pointer items-center gap-2 rounded-xl border p-2.5 text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                <input type="radio" name="element_input_display_version" value="triple" class="element_input_display_version accent-violet h-3.5 w-3.5" />
+                                <div>
+                                    <span class="block text-xs font-bold">Triple</span>
+                                    <span class="text-meta block">Prev · Active (center) · Next · auto-shift</span>
+                                </div>
                             </label>
                         </div>
                     </div>

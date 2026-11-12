@@ -59,21 +59,24 @@ const renderingEffectsConvertHexColorToRgba = (hex, alpha) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const renderingEffectsInitializeMouseTracking = (canvasElement) => {
-    if (!canvasElement || canvasElement._mouseTrackingSetup) return;
+const renderingEffectsInitializeMouseTracking = (element) => {
+    if (!element || element._mouseTrackingSetup) {
+        return;
+    }
 
-    canvasElement.addEventListener('mousemove', (mouseMoveEvent) => {
-        const canvasBounds = canvasElement.getBoundingClientRect();
-        mouseX = (mouseMoveEvent.clientX - canvasBounds.left) / canvasBounds.width;
-        mouseY = (mouseMoveEvent.clientY - canvasBounds.top) / canvasBounds.height;
+    element.addEventListener('mousemove', (event) => {
+        const canvasBounds = element.getBoundingClientRect();
+        mouseX = (event.clientX - canvasBounds.left) / canvasBounds.width;
+        mouseY = (event.clientY - canvasBounds.top) / canvasBounds.height;
+
         isMouseOver = true;
     });
 
-    canvasElement.addEventListener('mouseleave', () => {
+    element.addEventListener('mouseleave', () => {
         isMouseOver = false;
     });
 
-    canvasElement._mouseTrackingSetup = true;
+    element._mouseTrackingSetup = true;
 };
 
 export const lyricsRenderingEffectsRenderBackground = (drawContext) => {
@@ -191,28 +194,25 @@ export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
     }
 
     // Setup mouse tracking on canvas
-    const canvasElement = document.querySelector(lyricsSettings.elementSelectorCanvas);
-    if (canvasElement) {
-        renderingEffectsInitializeMouseTracking(canvasElement);
+    const elementCanvas = document.querySelector(lyricsSettings.elementSelectorCanvas);
+    if (elementCanvas) {
+        renderingEffectsInitializeMouseTracking(elementCanvas);
     }
-
-    // Ambil Key Color terbaru dari settings
-    const keyColor = lyricsSettings.lyricsKeyColor || lyricsSettings.lyricsDefaultKeyColor;
 
     lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(lyricsSettings.lyricsAudioFrequencyData);
 
-    const spectrumBarsCount = lyricsSettings.lyricsSpectrumBarsCount;
+    const spectrumBarsCount = lyricsSettings.lyricsSpectrumBarsCount || 80;
+    const spectrumBarGap = lyricsSettings.lyricsSpectrumBarGap || 3;
+    const spectrumThreshold = lyricsSettings.lyricsSpectrumThreshold || 10;
     const spectrumBinSize = Math.floor(lyricsSettings.lyricsAudioFrequencyData.length / spectrumBarsCount);
-    const spectrumBarGap = lyricsSettings.lyricsSpectrumBarGap;
     const spectrumBarWidth = lyricsSettings.lyricsPreviewWidth / (spectrumBarsCount * 2);
-    const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsSpectrumMaxHeightRatio;
+    const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * (lyricsSettings.lyricsSpectrumMaxHeightRatio || 0.12);
     const spectrumBaseY = lyricsSettings.lyricsPreviewHeight;
-    const spectrumThreshold = lyricsSettings.lyricsSpectrumThreshold;
 
-    // Buat Gradien berdasarkan Key Color yang dipilih user
     const spectrumGradient = drawContext.createLinearGradient(0, spectrumBaseY, 0, spectrumBaseY - spectrumMaxHeight);
-    spectrumGradient.addColorStop(0, renderingEffectsConvertHexColorToRgba(keyColor, lyricsSettings.lyricsSpectrumGradientStartAlpha));
-    spectrumGradient.addColorStop(1, renderingEffectsConvertHexColorToRgba(keyColor, lyricsSettings.lyricsSpectrumGradientEndAlpha));
+    const spectrumColorKey = lyricsSettings.lyricsKeyColor || lyricsSettings.lyricsDefaultKeyColor;
+    spectrumGradient.addColorStop(0, renderingEffectsConvertHexColorToRgba(spectrumColorKey, lyricsSettings.lyricsSpectrumGradientStartAlpha));
+    spectrumGradient.addColorStop(1, renderingEffectsConvertHexColorToRgba(spectrumColorKey, lyricsSettings.lyricsSpectrumGradientEndAlpha));
 
     drawContext.fillStyle = spectrumGradient;
 

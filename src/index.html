@@ -44,7 +44,7 @@
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
                         <div class="flex items-center justify-between">
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-teal h-2 w-2 rounded-full"></span> Header</h2>
-                            
+
                             <button type="button" class="element_button_select_header text-teal cursor-pointer font-mono text-xs tracking-tight">Template</button>
                         </div>
 
@@ -54,7 +54,7 @@
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
                         <div class="flex items-center justify-between">
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-cyan h-2 w-2 rounded-full"></span> Footer</h2>
-                            
+
                             <button type="button" class="element_button_select_footer text-cyan cursor-pointer font-mono text-xs tracking-tight">Template</button>
                         </div>
 
@@ -63,21 +63,23 @@
                 </div>
 
                 <div class="order-1 flex flex-col gap-4 lg:order-none lg:col-span-6">
-                    <div class="border-key overflow-hidden rounded-2xl border shadow-2xl">
-                        <div class="bg-background group relative aspect-video w-full overflow-hidden">
-                            <canvas class="element_canvas_preview block h-full w-full object-cover" width="1920" height="1080"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="element_container_controll border-border hidden flex-col items-center gap-4 rounded-2xl border p-4 md:flex-row">
-                        <div class="w-full md:flex-grow">
-                            <audio class="element_audio accent-key h-10 w-full" controls></audio>
+                    <div class="flex w-full flex-col items-center justify-center gap-4 lg:sticky lg:top-4">
+                        <div class="border-key w-full overflow-hidden rounded-2xl border shadow-2xl">
+                            <div class="bg-background group relative aspect-video w-full overflow-hidden">
+                                <canvas class="element_canvas_preview block h-full w-full object-cover" width="1920" height="1080"></canvas>
+                            </div>
                         </div>
 
-                        <div class="grid w-full shrink-0 grid-cols-2 gap-4">
-                            <button type="button" class="element_button_fullscreen text-text border-border bg-border cursor-pointer rounded-lg border px-5 py-2.5 text-xs font-bold transition-transform active:scale-95">FULLSCREEN</button>
+                        <div class="element_container_controll border-border hidden w-full flex-col items-center gap-4 rounded-2xl border p-4 md:flex-row">
+                            <div class="w-full md:flex-grow">
+                                <audio class="element_audio accent-key h-10 w-full" controls></audio>
+                            </div>
 
-                            <button type="button" class="element_button_export text-text border-key bg-key cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RECORD</button>
+                            <div class="grid w-full shrink-0 grid-cols-2 gap-4">
+                                <button type="button" class="element_button_fullscreen text-text border-border bg-border cursor-pointer rounded-lg border px-5 py-2.5 text-xs font-bold transition-transform active:scale-95">FULLSCREEN</button>
+
+                                <button type="button" class="element_button_export text-text border-key bg-key cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RECORD</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -88,32 +90,33 @@
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-sky h-2 w-2 rounded-full"></span> Media</h2>
                         </div>
 
-                        <div class="flex items-center justify-between">
-                            <span class="text-meta block text-xs font-semibold">Audio</span>
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Audio</span>
 
-                            <button type="button" class="element_button_remove_audio text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
-                        </div>
+                                <button type="button" class="element_button_remove_audio text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            </div>
 
-                        <input class="element_input_audio border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
-                    </label>
+                            <input class="element_input_audio border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*" />
+                        </label>
 
-                    <label class="block cursor-pointer space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-meta block text-xs font-semibold">Background (Image / Video)</span>
-                            <button type="button" class="element_button_remove_background text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
-                        </div>
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Background (Image / Video)</span>
+                                <button type="button" class="element_button_remove_background text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            </div>
 
-                        <input class="element_input_background border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
-                    </label>
+                            <input class="element_input_background border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*,video/*" />
+                        </label>
 
-                    <label class="block cursor-pointer space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-meta block text-xs font-semibold">Intro (Audio / Video)</span>
-                            <button type="button" class="element_button_remove_intro text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
-                        </div>
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Intro (Audio / Video)</span>
+                                <button type="button" class="element_button_remove_intro text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            </div>
 
-                        <input class="element_input_intro border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*,video/*" />
-                    </label>
+                            <input class="element_input_intro border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="audio/*,video/*" />
+                        </label>
                     </div>
 
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">

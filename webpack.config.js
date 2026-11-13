@@ -1,12 +1,34 @@
 const path = require('path');
+const fs = require('fs');
 const terserWebpackPlugin = require('terser-webpack-plugin');
+
+// 1. Fungsi untuk membaca dan membuat objek entry secara otomatis
+const generateEntries = () => {
+    const scriptsDirectory = path.resolve(__dirname, 'src/scripts');
+    const entries = {};
+
+    // Cek apakah foldernya ada
+    if (fs.existsSync(scriptsDirectory)) {
+        const files = fs.readdirSync(scriptsDirectory);
+
+        files.forEach((file) => {
+            // Hanya ambil file berformat .js
+            if (path.extname(file) === '.js') {
+                const entryName = path.basename(file, '.js'); // Nama file tanpa ekstensi (contoh: 'script')
+                entries[entryName] = path.join(scriptsDirectory, file);
+            }
+        });
+    }
+
+    return entries;
+};
 
 module.exports = {
     mode: 'production',
-    entry: {
-        'script': './src/scripts/script.js',
-        'script-v2': './src/scripts/script-v2.js',
-    },
+
+    // 2. Terapkan fungsi auto entry di sini
+    entry: generateEntries(),
+
     output: {
         clean: false,
         path: path.resolve(__dirname, './dist/scripts'),
@@ -29,10 +51,6 @@ module.exports = {
                                     },
                                 ],
                             ],
-                            plugins: [
-                                // your plugins here
-                            ],
-                            // add the terserOptions here
                             compact: true,
                             comments: false
                         }
@@ -56,8 +74,6 @@ module.exports = {
             })
         ]
     },
-    plugins: [
-    ],
-    // devtool: 'source-map',
+    plugins: [],
     watch: false
-}
+};

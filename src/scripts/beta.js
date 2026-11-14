@@ -3298,17 +3298,6 @@ if (typeof module === 'object' && typeof module.exports === 'object') Object.ass
         }
 
         try {
-            // try {
-            //     await document.fonts.load('82px "Nexa Black"');
-            // } catch (error) {
-            //     /* abaikan */
-            // }
-            // try {
-            //     await document.fonts.load('82px "Montserrat"');
-            // } catch (error) {
-            //     /* abaikan */
-            // }
-
             await spectrumAnalysis.promise;
             if (!spectrumAnalysis.decodedAudioBuffer || !spectrumAnalysis.frequencyFrames) {
                 throw new Error('Audio analysis is not yet complete or has failed.');
@@ -3331,8 +3320,6 @@ if (typeof module === 'object' && typeof module.exports === 'object') Object.ass
             if (exportInputs.introUrl) {
                 URL.revokeObjectURL(exportInputs.introUrl);
             }
-
-            exportUi.title().textContent = 'Done';
 
             updateExportUi(directoryHandle ? 'The MP4 file is saved in the selected folder.\n…' : 'The MP4 file has been downloaded.\n…', 1);
 

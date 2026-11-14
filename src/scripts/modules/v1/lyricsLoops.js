@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsRenderingCoreRender } from './lyricsRenderingCore';
 
 let idlePreviewRequestID = null;

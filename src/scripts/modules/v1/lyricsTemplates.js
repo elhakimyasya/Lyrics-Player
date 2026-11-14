@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsStorageLoad, lyricsStorageSave } from './lyricsStorage';
 import { lyricsLoopsRenderPreviewFrameWhenIdle } from './lyricsLoops';
 

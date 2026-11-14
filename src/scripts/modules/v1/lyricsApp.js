@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsParsingParse } from './lyricsParsing';
 import { lyricsStorageLoad } from './lyricsStorage';
 import { lyricsParsingNormalize } from './lyricsParsing';

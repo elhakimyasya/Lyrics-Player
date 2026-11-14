@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsRenderingEffectsEnsureBackgroundVideoPlaying } from './lyricsRenderingEffects';
 import { lyricsRenderingEffectsUpdateBackgroundOpacity } from './lyricsRenderingEffects';
 import { lyricsRenderingEffectsRenderBackground } from './lyricsRenderingEffects';
@@ -115,12 +115,14 @@ const renderingCoreRenderOverlayTextLines = (drawContext, lines, adjustedRenderT
     lyricsRenderingCoreRenderHeaderFooter(drawContext, lines, adjustedRenderTime, renderOptions);
 };
 
-export const lyricsRenderingCoreRender = (currentTimeMilliseconds, drawContext) => {
+export const lyricsRenderingCoreRender = (currentTimeMilliseconds, drawContext, renderOptions = {}) => {
     const audioPlayerElement = document.querySelector(lyricsSettings.elementSelectorAudio);
     const adjustedRenderTime = lyricsRenderingCoreGetAdjustedRenderTime(currentTimeMilliseconds);
     const lineState = lyricsRenderingCoreGetRenderLineState(adjustedRenderTime, audioPlayerElement);
 
-    lyricsRenderingEffectsEnsureBackgroundVideoPlaying();
+    if (!renderOptions.isOfflineExport) {
+        lyricsRenderingEffectsEnsureBackgroundVideoPlaying();
+    }
     lyricsRenderingEffectsUpdateBackgroundOpacity(lineState);
 
     drawContext.clearRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
@@ -140,7 +142,7 @@ export const lyricsRenderingCoreRender = (currentTimeMilliseconds, drawContext) 
 
     lyricsRenderingCoreRenderOverlayText(drawContext, adjustedRenderTime);
     lyricsRenderingCoreRenderLyricsLines(drawContext, lineState, adjustedRenderTime);
-    lyricsRenderingEffectsRenderSpectrumLayer(drawContext);
+    lyricsRenderingEffectsRenderSpectrumLayer(drawContext, renderOptions.frequencyData, renderOptions.isOfflineExport);
 };
 
 export const lyricsRenderingCoreGetRenderLineState = (adjustedRenderTime, audioElement) => {

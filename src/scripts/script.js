@@ -1,4 +1,4 @@
-import { lyricsSettings } from "./modules/v1/lyricsCore";
+import { lyricsSettings } from "./modules/v1/lyricsSettings";
 import { lyricsCoreGetCanvasContext } from "./modules/v1/lyricsCore";
 import { lyricsAppInit } from "./modules/v1/lyricsApp";
 import { lyricsEventsBind } from "./modules/v1/lyricsEvents";

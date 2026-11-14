@@ -1,7 +1,8 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsStorageSave } from './lyricsStorage';
 import { lyricsLoopsRenderPreviewFrameWhenIdle } from './lyricsLoops';
 import { lyricsRecordingStart, lyricsRecordingStop } from './lyricsRecording';
+import { lyricsMp4ExportStart } from './lyricsMp4Export';
 import { lyricsMediaHandleAudioFileChange, lyricsMediaHandleBackgroundFileChange, lyricsMediaHandleIntroFileChange, lyricsMediaRemoveAudioAsset, lyricsMediaRemoveBackgroundAsset, lyricsMediaRemoveIntroAsset } from './lyricsMedia';
 import { lyricsMediaEnsureAudioContextActive } from './lyricsMedia';
 import { lyricsLoopsRenderPreviewFrame } from './lyricsLoops';
@@ -110,6 +111,7 @@ export const lyricsEventsBindControl = () => {
     });
 
     document.querySelector(lyricsSettings.elementSelectorButtonExport).addEventListener('click', () => {
+        if (lyricsSettings.lyricsStateIsMp4Exporting) return;
         const audioElement = document.querySelector(lyricsSettings.elementSelectorAudio);
         const buttonElement = document.querySelector(lyricsSettings.elementSelectorButtonExport);
 
@@ -120,6 +122,13 @@ export const lyricsEventsBindControl = () => {
         }
 
         lyricsRecordingStart({ audioElement, buttonElement });
+    });
+
+    document.querySelector(lyricsSettings.elementSelectorButtonExportMp4).addEventListener('click', () => {
+        lyricsMp4ExportStart({
+            audioElement: document.querySelector(lyricsSettings.elementSelectorAudio),
+            buttonElement: document.querySelector(lyricsSettings.elementSelectorButtonExportMp4),
+        });
     });
 
     document.querySelector(lyricsSettings.elementSelectorInputSpectrum).addEventListener('change', (inputEvent) => {

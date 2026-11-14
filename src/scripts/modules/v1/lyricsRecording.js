@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsMediaEnsureAudioContextActive } from './lyricsMedia';
 import { lyricsMediaGetAudioState } from './lyricsMedia';
 import { lyricsRenderingCoreRender } from './lyricsRenderingCore';

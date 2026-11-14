@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 
 export const lyricsParsingParse = (text) => {
     const lyricOutput = [];

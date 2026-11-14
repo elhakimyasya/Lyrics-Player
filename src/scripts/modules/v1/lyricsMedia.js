@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 import { lyricsRenderingEffectsRenderAnalyzer } from './lyricsRenderingEffects';
 import { lyricsStorageSave } from './lyricsStorage';
 import { lyricsStorageLoad } from './lyricsStorage';
@@ -195,6 +195,7 @@ export const lyricsMediaEnsureAudioContextActive = async () => {
 export const lyricsMediaGetAudioState = (audioElement) => {
     return new Promise((resolve, reject) => {
         if (audioElement.readyState >= lyricsSettings.lyricsAudioReadyStateCanPlay) return resolve();
+        if (audioElement.error) return reject(new Error('Audio resource failed to load.'));
 
         const handleCanPlay = () => {
             cleanupListeners();
@@ -210,10 +211,10 @@ export const lyricsMediaGetAudioState = (audioElement) => {
 
         const cleanupListeners = () => {
             audioElement.removeEventListener('canplay', handleCanPlay);
-            audioElement.removeEventListener('errorEvent', handleError);
+            audioElement.removeEventListener('error', handleError);
         };
 
         audioElement.addEventListener('canplay', handleCanPlay);
-        audioElement.addEventListener('errorEvent', handleError);
+        audioElement.addEventListener('error', handleError);
     });
 };

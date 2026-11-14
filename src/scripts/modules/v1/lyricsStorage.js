@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 
 const storageOpenDatabase = () => {
     return new Promise((resolve, reject) => {

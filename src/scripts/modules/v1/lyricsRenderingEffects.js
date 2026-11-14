@@ -1,4 +1,4 @@
-import { lyricsSettings } from './lyricsCore';
+import { lyricsSettings } from './lyricsSettings';
 
 let mouseX = 0;
 let mouseY = 0;
@@ -188,8 +188,9 @@ export const lyricsRenderingEffectsRenderAnalyzer = (audioElement) => {
     }
 };
 
-export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
-    if (!lyricsSettings.lyricsAudioAnalyser || !lyricsSettings.lyricsAudioFrequencyData) {
+export const lyricsRenderingEffectsRenderSpectrum = (drawContext, frameFrequencyData = null, isOfflineExport = false) => {
+    const frequencyData = frameFrequencyData || lyricsSettings.lyricsAudioFrequencyData;
+    if (!frequencyData) {
         return;
     }
 
@@ -199,12 +200,15 @@ export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
         renderingEffectsInitializeMouseTracking(elementCanvas);
     }
 
-    lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(lyricsSettings.lyricsAudioFrequencyData);
+    if (!frameFrequencyData) {
+        if (!lyricsSettings.lyricsAudioAnalyser) return;
+        lyricsSettings.lyricsAudioAnalyser.getByteFrequencyData(frequencyData);
+    }
 
     const spectrumBarsCount = lyricsSettings.lyricsSpectrumBarsCount || 80;
     const spectrumBarGap = lyricsSettings.lyricsSpectrumBarGap || 3;
     const spectrumThreshold = lyricsSettings.lyricsSpectrumThreshold || 10;
-    const spectrumBinSize = Math.floor(lyricsSettings.lyricsAudioFrequencyData.length / spectrumBarsCount);
+    const spectrumBinSize = Math.floor(frequencyData.length / spectrumBarsCount);
     const spectrumBarWidth = lyricsSettings.lyricsPreviewWidth / (spectrumBarsCount * 2);
     const spectrumMaxHeight = lyricsSettings.lyricsPreviewHeight * (lyricsSettings.lyricsSpectrumMaxHeightRatio || 0.12);
     const spectrumBaseY = lyricsSettings.lyricsPreviewHeight;
@@ -219,7 +223,7 @@ export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
     for (let index = 0; index < spectrumBarsCount; index++) {
         let frequencyMaxValue = 0;
         for (let frequencyBinIndex = 0; frequencyBinIndex < spectrumBinSize; frequencyBinIndex++) {
-            const frequencyValue = lyricsSettings.lyricsAudioFrequencyData[index * spectrumBinSize + frequencyBinIndex];
+            const frequencyValue = frequencyData[index * spectrumBinSize + frequencyBinIndex];
             if (frequencyValue > frequencyMaxValue) {
                 frequencyMaxValue = frequencyValue;
             }
@@ -231,7 +235,7 @@ export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
 
         // Interactive mouse effect: boost bars near mouse X position
         let interactiveBoost = 1.0;
-        if (isMouseOver) {
+        if (isMouseOver && !isOfflineExport) {
             const barCenterX = index / spectrumBarsCount;
             const distance = Math.abs(barCenterX - mouseX);
             // Max 30% boost near mouse
@@ -254,14 +258,14 @@ export const lyricsRenderingEffectsRenderSpectrum = (drawContext) => {
     }
 };
 
-export const lyricsRenderingEffectsRenderSpectrumLayer = (drawContext) => {
+export const lyricsRenderingEffectsRenderSpectrumLayer = (drawContext, frameFrequencyData = null, isOfflineExport = false) => {
     if (!lyricsSettings.lyricsStateRenderSpectrum) {
         return;
     }
 
     drawContext.save();
 
-    lyricsRenderingEffectsRenderSpectrum(drawContext);
+    lyricsRenderingEffectsRenderSpectrum(drawContext, frameFrequencyData, isOfflineExport);
 
     drawContext.restore();
 };

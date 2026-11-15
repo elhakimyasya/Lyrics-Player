@@ -75,14 +75,16 @@
                                 <audio class="element_audio accent-key h-10 w-full" controls></audio>
                             </div>
 
-                            <div class="grid w-full shrink-0 grid-cols-2 gap-4 lg:grid-cols-3">
-                                <button type="button" class="element_button_fullscreen text-text border-border bg-border cursor-pointer rounded-lg border px-5 py-2.5 text-xs font-bold transition-transform active:scale-95">FULLSCREEN</button>
+                            <div class="grid w-full shrink-0 grid-cols-3 gap-4">
+                                <button type="button" class="element_button_fullscreen text-text border-border bg-border line-clamp-1 cursor-pointer rounded-lg border px-5 py-2.5 text-xs font-bold transition-transform active:scale-95">FULLSCREEN</button>
 
-                                <button type="button" class="element_button_export text-text border-key bg-key cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RECORD (WEBM)</button>
+                                <button type="button" class="element_button_export text-text border-key bg-key line-clamp-1 cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RECORD (WEBM)</button>
 
-                                <button type="button" class="element_button_export_mp4 text-background border-emerald bg-emerald cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">EXPORT (MP4)</button>
+                                <button type="button" class="element_button_export_mp4 text-background border-emerald bg-emerald line-clamp-1 cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">EXPORT (MP4)</button>
                             </div>
                         </div>
+
+                        <div class=""></div>
                     </div>
                 </div>
 
@@ -170,7 +172,7 @@
                             </label>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 border-t border-border pt-4">
+                        <div class="border-border grid grid-cols-2 gap-3 border-t pt-4">
                             <label class="space-y-1">
                                 <span class="text-meta block text-xs font-semibold">Bar count</span>
                                 <input type="number" min="1" max="256" step="1" class="element_input_spectrum_bar_count border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
@@ -182,7 +184,7 @@
                             </label>
                         </div>
 
-                        <div class="space-y-3 border-t border-border pt-4">
+                        <div class="border-border space-y-3 border-t pt-4">
                             <label class="flex cursor-pointer items-center justify-between gap-3">
                                 <span class="text-meta text-xs font-semibold">Peak marker</span>
                                 <input type="checkbox" class="element_input_spectrum_peak_enabled accent-key h-4 w-4" />

@@ -5,40 +5,40 @@ let idlePreviewRequestID = null;
 let lastRenderTime = 0;
 
 export const lyricsLoopsRenderCurrentFrame = (audioElement, drawContext) => {
-    lyricsRenderingCoreRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, drawContext);
+    lyricsRenderingCoreRender(audioElement.currentTime * 1000, drawContext);
 };
 
 export const lyricsLoopsRenderPreviewFrame = (audioElement) => {
-    lyricsLoopsRenderCurrentFrame(audioElement, lyricsSettings.lyricsCanvasContext);
+    lyricsLoopsRenderCurrentFrame(audioElement, lyricsSettings.canvas.context);
 };
 
 export const lyricsLoopsRenderPreviewFrameWhenIdle = (audioElement) => {
-    if (lyricsSettings.lyricsStateIsPlaying || idlePreviewRequestID) {
+    if (lyricsSettings.state.isPlaying || idlePreviewRequestID) {
         return;
     }
 
     // Coalesce bursts from text/color inputs into one paint.
     idlePreviewRequestID = requestAnimationFrame(() => {
         idlePreviewRequestID = null;
-        if (!lyricsSettings.lyricsStateIsPlaying) {
+        if (!lyricsSettings.state.isPlaying) {
             lyricsLoopsRenderPreviewFrame(audioElement);
         }
     });
 };
 
 export const lyricsLoopsStartPreviewLoop = () => {
-    if (lyricsSettings.lyricsAnimationRequestID) {
+    if (lyricsSettings.state.animationRequestId) {
         return;
     }
 
-    lyricsSettings.lyricsStateIsPlaying = true;
-    lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsLoopsRenderLoop);
+    lyricsSettings.state.isPlaying = true;
+    lyricsSettings.state.animationRequestId = requestAnimationFrame(lyricsLoopsRenderLoop);
 };
 
 export const lyricsLoopsStopPreviewLoop = () => {
-    if (lyricsSettings.lyricsAnimationRequestID) {
-        cancelAnimationFrame(lyricsSettings.lyricsAnimationRequestID);
-        lyricsSettings.lyricsAnimationRequestID = null;
+    if (lyricsSettings.state.animationRequestId) {
+        cancelAnimationFrame(lyricsSettings.state.animationRequestId);
+        lyricsSettings.state.animationRequestId = null;
     }
 
     if (idlePreviewRequestID) {
@@ -46,28 +46,28 @@ export const lyricsLoopsStopPreviewLoop = () => {
         idlePreviewRequestID = null;
     }
 
-    lyricsSettings.lyricsStateIsPlaying = false;
+    lyricsSettings.state.isPlaying = false;
 };
 
 export const lyricsLoopsRenderLoop = () => {
-    const audioPlayerElement = document.querySelector(lyricsSettings.elementSelectorAudio);
-    if (!audioPlayerElement || !lyricsSettings.lyricsStateIsPlaying) {
-        lyricsSettings.lyricsAnimationRequestID = null;
+    const audioPlayerElement = document.querySelector(lyricsSettings.selectors.elementAudio);
+    if (!audioPlayerElement || !lyricsSettings.state.isPlaying) {
+        lyricsSettings.state.animationRequestId = null;
         return;
     }
 
     const currentTimeMilliseconds = performance.now();
-    const renderThrottleMilliseconds = lyricsSettings.lyricsStateIsRecording ? 0 : lyricsSettings.lyricsMillisecondsPerSecond / lyricsSettings.lyricsFramesPerSecond;
+    const renderThrottleMilliseconds = lyricsSettings.state.isRecording ? 0 : 1000 / lyricsSettings.canvas.framesPerSecond;
 
-    if (!lyricsSettings.lyricsStateIsRecording && currentTimeMilliseconds - lastRenderTime < renderThrottleMilliseconds) {
-        lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsLoopsRenderLoop);
+    if (!lyricsSettings.state.isRecording && currentTimeMilliseconds - lastRenderTime < renderThrottleMilliseconds) {
+        lyricsSettings.state.animationRequestId = requestAnimationFrame(lyricsLoopsRenderLoop);
 
         return;
     }
 
     lastRenderTime = currentTimeMilliseconds;
 
-    lyricsRenderingCoreRender(audioPlayerElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, lyricsSettings.lyricsCanvasContext);
+    lyricsRenderingCoreRender(audioPlayerElement.currentTime * 1000, lyricsSettings.canvas.context);
 
-    lyricsSettings.lyricsAnimationRequestID = requestAnimationFrame(lyricsLoopsRenderLoop);
+    lyricsSettings.state.animationRequestId = requestAnimationFrame(lyricsLoopsRenderLoop);
 };

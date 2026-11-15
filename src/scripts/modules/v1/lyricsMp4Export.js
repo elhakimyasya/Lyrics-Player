@@ -4,7 +4,11 @@ import { lyricsLoopsRenderPreviewFrame, lyricsLoopsStopPreviewLoop } from './lyr
 import { Mp4Muxer } from './lyricsMp4Muxer';
 import { lyricsRenderingCoreRender } from './lyricsRenderingCore';
 
-const { video: VIDEO_EXPORT, audio: AUDIO_EXPORT, muxer: MUXER_EXPORT, spectrum: SPECTRUM, timing: EXPORT_TIMING, blobChunkSize, filePicker, wakeLockType, selectors: EXPORT_SELECTORS, ui: EXPORT_UI } = lyricsSettings.lyricsMp4Export;
+const { video: VIDEO_EXPORT, audio: AUDIO_EXPORT, muxer: MUXER_EXPORT, timing: EXPORT_TIMING, blobChunkSize, filePicker, wakeLockType } = lyricsSettings.mp4Export;
+const SPECTRUM = lyricsSettings.spectrum;
+const EXPORT_SELECTORS = lyricsSettings.selectors.mp4Export;
+const MESSAGES = lyricsSettings.messages;
+const EXPORT_UI = MESSAGES.mp4Export;
 
 const EXPORT_CANCELLED = new Error(EXPORT_UI.exportCancelled);
 const exportControl = { isCancelRequested: false, wakeLock: null, cancelWorker: null };
@@ -259,7 +263,7 @@ const findAudioEncoderConfig = async () => {
             const support = await AudioEncoder.isConfigSupported(config);
             if (support.supported) return { encoderConfig: support.config, muxerCodec: candidate.muxerCodec };
         } catch (error) {
-            console.warn(`Audio encoder ${candidate.encoderCodec} is unavailable:`, error);
+            console.warn(EXPORT_UI.audioEncoderUnavailable.replace('{codec}', candidate.encoderCodec), error);
         }
     }
     throw new Error(EXPORT_UI.noAudioEncoder);
@@ -362,7 +366,7 @@ const findVideoEncoderCandidates = async () => {
                 const support = await VideoEncoder.isConfigSupported(config);
                 if (support.supported) candidates.push({ config: support.config, label: `H.264 ${mode.label} (${codecString})` });
             } catch (error) {
-                console.warn(`Video encoder ${mode.label} (${codecString}) is unavailable:`, error);
+                console.warn(EXPORT_UI.videoEncoderUnavailable.replace('{label}', `${mode.label} (${codecString})`), error);
             }
         }
     }
@@ -399,7 +403,7 @@ const downloadBlob = (blob, fileName) => {
     linkElement.href = objectUrl;
     linkElement.download = fileName;
     linkElement.click();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), lyricsSettings.lyricsRecordingObjectUrlRevokeDelayMs);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), lyricsSettings.recording.objectUrlRevokeDelayMilliseconds);
 };
 
 const drawMediaCover = (context, videoElement) => {
@@ -413,12 +417,12 @@ const drawMediaCover = (context, videoElement) => {
 };
 
 const createBlobFromAudioElement = async (audioElement) => {
-    const audioFile = document.querySelector(lyricsSettings.elementSelectorInputAudio)?.files?.[0];
+    const audioFile = document.querySelector(lyricsSettings.selectors.elementInput.audio)?.files?.[0];
     if (audioFile) return audioFile;
     const sourceUrl = audioElement.currentSrc || audioElement.src;
-    if (!sourceUrl) throw new Error(EXPORT_UI.missingAudio);
+    if (!sourceUrl) throw new Error(MESSAGES.missingAudio);
     const response = await fetch(sourceUrl);
-    if (!response.ok) throw new Error(`Failed to load audio file (${response.status}).`);
+    if (!response.ok) throw new Error(EXPORT_UI.audioFileLoadFailed.replace('{status}', response.status));
     return response.blob();
 };
 
@@ -437,11 +441,11 @@ const collectExportInputs = async (audioElement) => {
         isIntroVideo: false,
         backgroundUrl: null,
         isBackgroundVideo: false,
-        staticBackground: lyricsSettings.lyricsResourceBackground,
-        offsetSeconds: parseFloat(document.querySelector(lyricsSettings.elementSelectorInputOffset)?.value) || 0,
-        headerLines: getTextareaLines(lyricsSettings.elementSelectorTextareaHeader),
-        footerLines: getTextareaLines(lyricsSettings.elementSelectorTextareaFooter),
-        isSpectrumEnabled: lyricsSettings.lyricsStateRenderSpectrum,
+        staticBackground: lyricsSettings.state.backgroundResource,
+        offsetSeconds: parseFloat(document.querySelector(lyricsSettings.selectors.elementInput.offset)?.value) || 0,
+        headerLines: getTextareaLines(lyricsSettings.selectors.elementTextarea.header),
+        footerLines: getTextareaLines(lyricsSettings.selectors.elementTextarea.footer),
+        isSpectrumEnabled: lyricsSettings.state.renderSpectrum,
         frequencyFrames: null,
         spectrumFrameCount: 0,
         audioChunks: [],
@@ -458,7 +462,7 @@ const collectExportInputs = async (audioElement) => {
     }
 
     try {
-        const introFile = document.querySelector(lyricsSettings.elementSelectorInputIntro)?.files?.[0];
+        const introFile = document.querySelector(lyricsSettings.selectors.elementInput.intro)?.files?.[0];
         if (introFile) {
             exportInputs.isIntroVideo = introFile.type.startsWith('video/');
             if (exportInputs.isIntroVideo) exportInputs.introUrl = URL.createObjectURL(introFile);
@@ -468,7 +472,7 @@ const collectExportInputs = async (audioElement) => {
                 exportInputs.introRightChannel = decodedIntroBuffer.numberOfChannels > 1 ? decodedIntroBuffer.getChannelData(1) : null;
                 exportInputs.introDurationSeconds = decodedIntroBuffer.duration;
             } catch (error) {
-                console.warn('Intro audio could not be decoded; exporting the intro without audio.', error);
+                console.warn(EXPORT_UI.introAudioUnavailable, error);
             }
             if (exportInputs.isIntroVideo) {
                 const probeVideo = await loadVideoElement(exportInputs.introUrl);
@@ -478,9 +482,9 @@ const collectExportInputs = async (audioElement) => {
             }
         }
 
-        if (lyricsSettings.lyricsResourceBackground?.type === lyricsSettings.lyricsMediaTypes.video) {
+        if (lyricsSettings.state.backgroundResource?.type === lyricsSettings.media.types.video) {
             exportInputs.isBackgroundVideo = true;
-            exportInputs.backgroundUrl = lyricsSettings.lyricsResourceBackground.element.currentSrc || lyricsSettings.lyricsResourceBackground.element.src;
+            exportInputs.backgroundUrl = lyricsSettings.state.backgroundResource.element.currentSrc || lyricsSettings.state.backgroundResource.element.src;
             exportInputs.staticBackground = null;
         }
         return { ...exportInputs, mainDurationMilliseconds: decodedMainBuffer.duration * 1000 };
@@ -492,7 +496,7 @@ const collectExportInputs = async (audioElement) => {
 
 const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) => {
     const { width, height, framesPerSecond } = VIDEO_EXPORT;
-    const outputFileName = `${lyricsSettings.lyricsExportFileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`;
+    const outputFileName = `${lyricsSettings.export.fileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`;
     const encoderDescription = `${videoCandidate.label} + ${exportInputs.muxerAudioCodec.toUpperCase()}`;
     const opusWarning = exportInputs.muxerAudioCodec === 'opus' ? EXPORT_UI.opusWarning : '';
     let fileWriter = null;
@@ -516,12 +520,12 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
     });
     let encoderError = null;
     let videoEncoder = null;
-    const previousBackground = lyricsSettings.lyricsResourceBackground;
-    const previousBackgroundOpacity = lyricsSettings.lyricsBackgroundCurrentOpacity;
-    const previousOverlayOpacity = lyricsSettings.lyricsOverlayCurrentOpacity;
-    const previousIntroState = lyricsSettings.lyricsStateIsRecordingIntro;
-    const previousIntroType = lyricsSettings.lyricsRecordingIntroType;
-    const previousTransitionState = lyricsSettings.lyricsRecordingMainTransitionPending;
+    const previousBackground = lyricsSettings.state.backgroundResource;
+    const previousBackgroundOpacity = lyricsSettings.state.backgroundOpacity;
+    const previousOverlayOpacity = lyricsSettings.state.overlayOpacity;
+    const previousIntroState = lyricsSettings.state.isRecordingIntro;
+    const previousIntroType = lyricsSettings.state.recordingIntroType;
+    const previousTransitionState = lyricsSettings.state.recordingMainTransitionPending;
     const mainDurationMilliseconds = exportInputs.mainDurationMilliseconds;
     const introSampleCount = Math.round(exportInputs.introDurationSeconds * AUDIO_EXPORT.sampleRate);
     const totalSampleCount = introSampleCount + exportInputs.mainLeftChannel.length;
@@ -530,6 +534,7 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
     let introVideoElement = null;
     let lastBackgroundSeekSeconds = -1;
     let lastIntroSeekSeconds = -1;
+    let hasRenderedMainFrame = false;
     let nextAudioChunkIndex = 0;
     let isFinished = false;
     const silentFrequencyData = new Uint8Array(SPECTRUM.binCount);
@@ -553,12 +558,12 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
         if (exportInputs.isBackgroundVideo) backgroundVideoElement = await loadVideoElement(exportInputs.backgroundUrl);
         if (exportInputs.isIntroVideo) introVideoElement = await loadVideoElement(exportInputs.introUrl);
         await document.fonts?.ready;
-        lyricsSettings.lyricsResourceBackground = backgroundVideoElement
-            ? { type: lyricsSettings.lyricsMediaTypes.video, element: backgroundVideoElement }
+        lyricsSettings.state.backgroundResource = backgroundVideoElement
+            ? { type: lyricsSettings.media.types.video, element: backgroundVideoElement }
             : exportInputs.staticBackground;
-        lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
-        lyricsSettings.lyricsOverlayCurrentOpacity = 0;
-        lyricsSettings.lyricsRecordingMainTransitionPending = false;
+        lyricsSettings.state.backgroundOpacity = 0;
+        lyricsSettings.state.overlayOpacity = 0;
+        lyricsSettings.state.recordingMainTransitionPending = false;
         const renderStartTimestamp = performance.now();
 
         for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -572,18 +577,23 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
                         await seekVideoToTime(introVideoElement, introSeekSeconds);
                         lastIntroSeekSeconds = introSeekSeconds;
                     }
-                    context.fillStyle = lyricsSettings.lyricsDefaultBackgroundColor;
+                    context.fillStyle = lyricsSettings.colors.default.background;
                     context.fillRect(0, 0, width, height);
                     drawMediaCover(context, introVideoElement);
                 } else {
-                    lyricsSettings.lyricsStateIsRecordingIntro = true;
-                    lyricsSettings.lyricsRecordingIntroType = 'audio';
+                    lyricsSettings.state.isRecordingIntro = true;
+                    lyricsSettings.state.recordingIntroType = 'audio';
                     lyricsRenderingCoreRender(0, context, { isOfflineExport: true });
                 }
             } else {
-                lyricsSettings.lyricsStateIsRecordingIntro = false;
-                lyricsSettings.lyricsRecordingIntroType = null;
+                lyricsSettings.state.isRecordingIntro = false;
+                lyricsSettings.state.recordingIntroType = null;
                 const mainSeconds = timelineSeconds - exportInputs.introDurationSeconds;
+                const isFirstMainFrame = !hasRenderedMainFrame;
+                if (isFirstMainFrame) {
+                    lyricsSettings.state.backgroundOpacity = lyricsSettings.rendering.fade.backgroundMaximumOpacity;
+                    hasRenderedMainFrame = true;
+                }
                 if (backgroundVideoElement) {
                     const videoDuration = backgroundVideoElement.duration || EXPORT_TIMING.backgroundVideoDurationFallbackSeconds;
                     const backgroundSeekSeconds = mainSeconds % videoDuration;
@@ -600,6 +610,7 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
                 lyricsRenderingCoreRender(mainSeconds * 1000, context, {
                     frequencyData,
                     isOfflineExport: true,
+                    snapBackgroundFade: isFirstMainFrame && exportInputs.introDurationSeconds > 0,
                 });
             }
 
@@ -613,7 +624,7 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
                 videoFrame.close();
             }
 
-            muxAudioChunksUpTo((timelineSeconds + EXPORT_TIMING.audioInterleaveLookaheadSeconds) * EXPORT_TIMING.microsecondsPerSecond);
+            muxAudioChunksUpTo((timelineSeconds + EXPORT_TIMING.audioInterleaveLookaheadSeconds) * 1_000_000);
             while (videoEncoder.encodeQueueSize > VIDEO_EXPORT.maximumPendingFrames) {
                 throwIfExportCancelled();
                 if (encoderError) throw encoderError;
@@ -621,13 +632,13 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
             }
             if (frameIndex % EXPORT_TIMING.yieldFrameInterval === 0) await yieldToBrowser();
             if (frameIndex % EXPORT_TIMING.statusFrameInterval === 0) {
-                const elapsedSeconds = Math.max(EXPORT_TIMING.minimumElapsedSeconds, (performance.now() - renderStartTimestamp) / lyricsSettings.lyricsMillisecondsPerSecond);
+                const elapsedSeconds = Math.max(EXPORT_TIMING.minimumElapsedSeconds, (performance.now() - renderStartTimestamp) / 1000);
                 const renderFramesPerSecond = (frameIndex + 1) / elapsedSeconds;
                 const remainingSeconds = (totalFrames - frameIndex) / renderFramesPerSecond;
                 const elapsed = `${Math.floor(elapsedSeconds / 60)}m ${Math.floor(elapsedSeconds % 60)}s`;
                 const remaining = `${Math.floor(remainingSeconds / 60)}m ${Math.floor(remainingSeconds % 60)}s`;
 
-                updateExportUi(`${encoderDescription}${opusWarning}\n⛶ ${frameIndex}/${totalFrames} · ᯓ ${renderFramesPerSecond.toFixed(1)} fps · ⏱ ${elapsed} · ⏲ ${remaining}`, frameIndex / totalFrames);
+                updateExportUi(`${encoderDescription}${opusWarning}\n⏱ ${elapsed} · ⏲ ${remaining} · ᯓ ${renderFramesPerSecond.toFixed(1)} fps · ⛶ ${frameIndex}/${totalFrames}`, frameIndex / totalFrames);
             }
         }
 
@@ -645,17 +656,17 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
         isFinished = true;
     } finally {
         if (videoEncoder && videoEncoder.state !== 'closed') videoEncoder.close();
-        lyricsSettings.lyricsResourceBackground = previousBackground;
-        lyricsSettings.lyricsBackgroundCurrentOpacity = previousBackgroundOpacity;
-        lyricsSettings.lyricsOverlayCurrentOpacity = previousOverlayOpacity;
-        lyricsSettings.lyricsStateIsRecordingIntro = previousIntroState;
-        lyricsSettings.lyricsRecordingIntroType = previousIntroType;
-        lyricsSettings.lyricsRecordingMainTransitionPending = previousTransitionState;
+        lyricsSettings.state.backgroundResource = previousBackground;
+        lyricsSettings.state.backgroundOpacity = previousBackgroundOpacity;
+        lyricsSettings.state.overlayOpacity = previousOverlayOpacity;
+        lyricsSettings.state.isRecordingIntro = previousIntroState;
+        lyricsSettings.state.recordingIntroType = previousIntroType;
+        lyricsSettings.state.recordingMainTransitionPending = previousTransitionState;
         if (fileWriter) {
             try {
                 await fileWriter.abort();
             } catch (error) {
-                console.warn('Failed to abort incomplete MP4 output:', error);
+                console.warn(EXPORT_UI.incompleteOutputAbortFailed, error);
             }
         }
         for (const videoElement of [backgroundVideoElement, introVideoElement]) {
@@ -666,9 +677,9 @@ const renderVideoFile = async (exportInputs, videoCandidate, directoryHandle) =>
         }
         if (!isFinished && directoryHandle) {
             try {
-                await directoryHandle.removeEntry(`${lyricsSettings.lyricsExportFileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`);
+                await directoryHandle.removeEntry(`${lyricsSettings.export.fileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`);
             } catch (error) {
-                console.warn('Failed to remove incomplete MP4 output:', error);
+                console.warn(EXPORT_UI.incompleteOutputRemoveFailed, error);
             }
         }
     }
@@ -685,7 +696,7 @@ const renderWithEncoderFallback = async (exportInputs, directoryHandle) => {
         } catch (error) {
             if (error === EXPORT_CANCELLED) throw error;
             lastError = error;
-            console.warn(`Encoder "${candidate.label}" failed:`, error);
+            console.warn(EXPORT_UI.encoderFailed.replace('{encoder}', candidate.label), error);
             if (index < videoCandidates.length - 1) {
                 updateExportUi(`Encoder ${candidate.label} failed,\ntrying ${videoCandidates[index + 1].label}…`, 0);
                 await waitMilliseconds(EXPORT_TIMING.fallbackDelayMs);
@@ -714,12 +725,12 @@ const chooseOutputDirectory = async () => {
 
 export const lyricsMp4ExportStart = async ({ audioElement, buttonElement }) => {
     if (exportInProgress) return;
-    if (lyricsSettings.lyricsStateIsRecording) {
+    if (lyricsSettings.state.isRecording) {
         alert(EXPORT_UI.stopRecording);
         return;
     }
     if (!audioElement.src) {
-        alert(EXPORT_UI.missingAudio);
+        alert(MESSAGES.missingAudio);
         return;
     }
     if (!('VideoEncoder' in window) || !('AudioEncoder' in window) || !('VideoFrame' in window) || !('OffscreenCanvas' in window)) {
@@ -731,7 +742,7 @@ export const lyricsMp4ExportStart = async ({ audioElement, buttonElement }) => {
     if (directoryHandle === false) return;
     exportInProgress = true;
     exportControl.isCancelRequested = false;
-    lyricsSettings.lyricsStateIsMp4Exporting = true;
+    lyricsSettings.state.isMp4Exporting = true;
     lyricsLoopsStopPreviewLoop();
     audioElement.pause();
     setExportButtonState(buttonElement, true);
@@ -783,7 +794,7 @@ export const lyricsMp4ExportStart = async ({ audioElement, buttonElement }) => {
         exportUi.cancelButton().onclick = () => {
             exportControl.isCancelRequested = true;
         };
-        lyricsSettings.lyricsStateIsMp4Exporting = false;
+        lyricsSettings.state.isMp4Exporting = false;
         setExportButtonState(buttonElement, false);
         audioElement.currentTime = 0;
         lyricsLoopsRenderPreviewFrame(audioElement);

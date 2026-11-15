@@ -18,11 +18,11 @@ export const lyricsParsingParse = (text) => {
         const lyricTime = [];
 
         while ((lyricMinute = lyricTimestamp.exec(lyricLine)) !== null) {
-            const timeMinute = parseInt(lyricMinute[1], lyricsSettings.lyricsNumberRadix);
-            const timeSecond = parseInt(lyricMinute[2], lyricsSettings.lyricsNumberRadix);
-            const timeMilisecond = lyricMinute[3] ? parseInt((lyricMinute[3] + lyricsSettings.lyricsTimestampMillisecondPadding).slice(0, lyricsSettings.lyricsTimestampMillisecondDigits), lyricsSettings.lyricsNumberRadix) : 0;
+            const timeMinute = parseInt(lyricMinute[1], 10);
+            const timeSecond = parseInt(lyricMinute[2], 10);
+            const timeMilisecond = lyricMinute[3] ? parseInt((lyricMinute[3] + '00').slice(0, 3), 10) : 0;
 
-            lyricTime.push((timeMinute * lyricsSettings.lyricsSecondsPerMinute + timeSecond) * lyricsSettings.lyricsMillisecondsPerSecond + timeMilisecond);
+            lyricTime.push((timeMinute * 60 + timeSecond) * 1000 + timeMilisecond);
             lyricLastIndex = lyricTimestamp.lastIndex;
         }
 

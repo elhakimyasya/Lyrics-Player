@@ -1,15 +1,23 @@
-const lyricsDefaultBackgroundColor = '#000000';
-const lyricsDefaultKeyColor = '#ffde59';
-const lyricsDefaultNonActiveTextColor = '#ffffff';
-const lyricsCanvasDefaults = { width: 1920, height: 1080, framesPerSecond: 60 };
-const lyricsSpectrumDefaults = {
+const canvasDefaults = { width: 1920, height: 1080, framesPerSecond: 60 };
+const spectrumDefaults = {
     fftSize: 1024,
     smoothingFactor: 0.1,
     bassFilterFrequency: 150,
     bassFilterGainDecibels: 6,
+    barCount: 80,
+    barGap: 3,
+    peak: {
+        enabled: true,
+        thickness: 3,
+        opacityPercent: 85,
+        holdTimeMilliseconds: 500,
+        fallingMode: 'steady',
+        fallSpeedDecibelsPerSecond: 24,
+    },
 };
+const defaultExportFileName = 'lyrics-export';
 
-const lyricsStorageKeys = {
+const storageKeys = {
     lyricsText: 'lyrics_textarea',
     lyricsHeader: 'lyrics_header',
     lyricsFooter: 'lyrics_footer',
@@ -21,187 +29,309 @@ const lyricsStorageKeys = {
     colorText: 'lyricsNonActiveTextColor',
     displayVersion: 'lyrics_display_version',
     lineBaseYRatio: 'lyrics_line_base_y_ratio',
+    spectrumEnabled: 'lyrics_spectrum_enabled',
+    spectrumBarCount: 'lyrics_spectrum_bar_count',
+    spectrumBarGap: 'lyrics_spectrum_bar_gap',
+    spectrumPeakEnabled: 'lyrics_spectrum_peak_enabled',
+    spectrumPeakThickness: 'lyrics_spectrum_peak_thickness',
+    spectrumPeakOpacity: 'lyrics_spectrum_peak_opacity',
+    spectrumPeakHoldTime: 'lyrics_spectrum_peak_hold_time',
+    spectrumPeakFallingMode: 'lyrics_spectrum_peak_falling_mode',
+    spectrumPeakFallSpeed: 'lyrics_spectrum_peak_fall_speed',
 };
 
+const readStoredNumberSetting = (storageKey, fallback, minimum, maximum, integer = false) => {
+    const storedValue = localStorage.getItem(storageKey);
+    if (storedValue === null) return fallback;
+
+    const parsedValue = Number(storedValue);
+    if (!Number.isFinite(parsedValue)) return fallback;
+
+    const boundedValue = Math.min(maximum, Math.max(minimum, parsedValue));
+    return integer ? Math.round(boundedValue) : boundedValue;
+};
+
+const storedSpectrumEnabled = localStorage.getItem(storageKeys.spectrumEnabled);
+const storedSpectrumPeakEnabled = localStorage.getItem(storageKeys.spectrumPeakEnabled);
+const storedSpectrumPeakFallingMode = localStorage.getItem(storageKeys.spectrumPeakFallingMode);
+const spectrumPeakFallingModes = ['steady', 'gravity', 'fade-out'];
+
 export const lyricsSettings = {
-    // DOM Selectors
-    elementSelectorInputAudio: '.element_input_audio',
-    elementSelectorInputOffset: '.element_input_offset',
-    elementSelectorInputBackground: '.element_input_background',
-    elementSelectorInputSpectrum: '.element_input_spectrum',
-    elementSelectorRadioDisplayVersion: '.element_input_display_version',
-    elementSelectorInputIntro: '.element_input_intro',
-    elementSelectorButtonRemoveAudio: '.element_button_remove_audio',
-    elementSelectorButtonRemoveBackground: '.element_button_remove_background',
-    elementSelectorButtonRemoveIntro: '.element_button_remove_intro',
-    elementSelectorTextareaLyrics: '.element_textarea_lyrics',
-    elementSelectorTextareaHeader: '.element_textarea_header',
-    elementSelectorTextareaFooter: '.element_textarea_footer',
-    elementSelectorButtonExport: '.element_button_export',
-    elementSelectorButtonExportMp4: '.element_button_export_mp4',
-    elementSelectorButtonFullscreen: '.element_button_fullscreen',
-    elementSelectorAudio: '.element_audio',
-    elementSelectorContainerControl: '.element_container_controll',
-    elementSelectorCanvas: '.element_canvas_preview',
-    elementSelectorColorBackground: '.element_input_bg_color',
-    elementSelectorColorKey: '.element_input_key_color',
-    elementSelectorColorText: '.element_input_text_color',
-    elementSelectorTemplateDialogs: '.element_dialog_template',
-    lyricsDataParsed: [],
-    lyricsStateIsPlaying: false,
-    lyricsStateIsRecording: false,
-    lyricsStateIsMp4Exporting: false,
-    lyricsStateIsRecordingIntro: false,
-    lyricsRecordingIntroType: null,
-    lyricsRecordingMainTransitionPending: false,
-    lyricsRecordingMediaRecorder: null,
-    lyricsStateRenderSpectrum: true,
-    lyricsResourceBackground: null,
-    lyricsAnimationRequestID: null,
-
-    // Audio Context & Spectrum
-    lyricsAudioContext: null,
-    lyricsAudioAnalyser: null,
-    lyricsAudioSource: null,
-    lyricsAudioFrequencyData: null,
-
-    // Canvas Config
-    lyricsCanvasContext: null,
-    lyricsCanvasContextType: '2d',
-    lyricsCanvasContextOptions: {
-        alpha: true,
-    },
-    lyricsPreviewWidth: lyricsCanvasDefaults.width,
-    lyricsPreviewHeight: lyricsCanvasDefaults.height,
-    lyricsFramesPerSecond: lyricsCanvasDefaults.framesPerSecond,
-    lyricsMillisecondsPerSecond: 1000,
-    lyricsSecondsPerMinute: 60,
-    lyricsNumberRadix: 10,
-    lyricsHexColorRadix: 16,
-    lyricsTimestampMillisecondPadding: '00',
-    lyricsTimestampMillisecondDigits: 3,
-
-    // Visual Config
-    lyricsFontFace: 'Nexa Black',
-    lyricsInstrumentalSymbol: '♪',
-    lyricsExportFileName: 'lyrics-export',
-    lyricsBackgroundCurrentOpacity: 0,
-    lyricsOverlayCurrentOpacity: 0,
-    lyricsFadeSpeed: 0.01,
-
-    // Storage Config
-    lyricsStorageKeys,
-    lyricsDefaultLyrics: '',
-    lyricsDefaultOffset: '0',
-    lyricsPersistenceKeys: {
-        audio: 'persistent_audio_file',
-        background: 'persistent_bg_file',
-        intro: 'persistent_intro_file',
-        bgType: 'persistent_bg_type',
-        audioFileName: 'persistent_audio_name',
-    },
-    lyricsDatabaseName: 'LyricsAppDB',
-    lyricsDatabaseVersion: 1,
-    lyricsDatabaseStoreName: 'AssetsStore',
-    lyricsDatabaseReadWriteMode: 'readwrite',
-
-    // Color Config
-    lyricsDefaultBackgroundColor,
-    lyricsDefaultKeyColor,
-    lyricsDefaultNonActiveTextColor,
-    lyricsBgColor: localStorage.getItem(lyricsStorageKeys.colorBackground) || lyricsDefaultBackgroundColor,
-    lyricsKeyColor: localStorage.getItem(lyricsStorageKeys.colorKey) || lyricsDefaultKeyColor,
-    lyricsNonActiveTextColor: localStorage.getItem(lyricsStorageKeys.colorText) || lyricsDefaultNonActiveTextColor,
-    lyricsColorSettingKeys: {
-        colorBackground: 'lyricsBgColor',
-        colorKey: 'lyricsKeyColor',
-        colorText: 'lyricsNonActiveTextColor',
+    // DOM hooks shared by preview, recording, and export.
+    selectors: {
+        elementInput: {
+            audio: '.element_input_audio',
+            offset: '.element_input_offset',
+            background: '.element_input_background',
+            spectrum: '.element_input_spectrum',
+            intro: '.element_input_intro',
+            backgroundColor: '.element_input_bg_color',
+            keyColor: '.element_input_key_color',
+            textColor: '.element_input_text_color',
+            spectrumBarCount: '.element_input_spectrum_bar_count',
+            spectrumBarGap: '.element_input_spectrum_bar_gap',
+            spectrumPeakEnabled: '.element_input_spectrum_peak_enabled',
+            spectrumPeakThickness: '.element_input_spectrum_peak_thickness',
+            spectrumPeakOpacity: '.element_input_spectrum_peak_opacity',
+            spectrumPeakHoldTime: '.element_input_spectrum_peak_hold_time',
+            spectrumPeakFallingMode: '.element_input_spectrum_peak_falling_mode',
+            spectrumPeakFallSpeed: '.element_input_spectrum_peak_fall_speed',
+        },
+        elementRadio: { displayVersion: '.element_input_display_version' },
+        elementButton: {
+            removeAudio: '.element_button_remove_audio',
+            removeBackground: '.element_button_remove_background',
+            removeIntro: '.element_button_remove_intro',
+            export: '.element_button_export',
+            exportMp4: '.element_button_export_mp4',
+            fullscreen: '.element_button_fullscreen',
+        },
+        elementTextarea: {
+            lyrics: '.element_textarea_lyrics',
+            header: '.element_textarea_header',
+            footer: '.element_textarea_footer',
+        },
+        elementAudio: '.element_audio',
+        elementContainer: { control: '.element_container_controll' },
+        elementCanvas: { preview: '.element_canvas_preview' },
+        elementDialog: { template: '.element_dialog_template' },
+        mp4Export: {
+            overlay: '.elememnt_dialog_export',
+            title: '.export_title',
+            status: '.export_status',
+            progressBar: '.export_bar',
+            cancelButton: '.export_cancel',
+        },
     },
 
-    // Media Config
-    lyricsMediaTypes: {
-        image: 'image',
-        video: 'video',
+    // Mutable application state.
+    state: {
+        parsedLyrics: [],
+        isPlaying: false,
+        isRecording: false,
+        isMp4Exporting: false,
+        isRecordingIntro: false,
+        recordingIntroType: null,
+        recordingMainTransitionPending: false,
+        recordingMediaRecorder: null,
+        renderSpectrum: storedSpectrumEnabled === null ? true : storedSpectrumEnabled === 'true',
+        backgroundResource: null,
+        animationRequestId: null,
+        backgroundOpacity: 0,
+        overlayOpacity: 0,
     },
-    lyricsVideoElementTag: 'video',
-    lyricsImageMimePrefix: 'image/',
-    lyricsBlobUrlPrefix: 'fileBlob:',
 
-    // Audio Config
-    lyricsAudioReadyStateCanPlay: 2,
-    lyricsAudioAnalyserFftSize: lyricsSpectrumDefaults.fftSize,
-    lyricsAudioAnalyserSmoothing: lyricsSpectrumDefaults.smoothingFactor,
-    lyricsAudioBassFilterType: 'lowshelf',
-    lyricsAudioBassFilterFrequency: lyricsSpectrumDefaults.bassFilterFrequency,
-    lyricsAudioBassFilterGain: lyricsSpectrumDefaults.bassFilterGainDecibels,
-    lyricsAudioOutputGain: 1.0,
+    // Shared export filename used by recording and file-picker persistence.
+    export: { fileName: defaultExportFileName },
 
-    // Recording Config
-    lyricsRecordingMimeType: 'video/webm',
-    lyricsRecordingMimeTypesWithCodecs: [
-        'video/webm;codecs=vp8,opus',
-        'video/webm;codecs=vp9,opus',
-        'video/webm',
-    ],
-    lyricsRecordingFileExtension: 'webm',
-    lyricsRecordingVideoBitsPerSecond: 12000000,
-    lyricsRecordingAudioBitsPerSecond: 192000,
-    lyricsRecordingButtonText: {
-        idle: 'RECORD',
-        active: 'RECORDING',
+    // Preview and recording canvas dimensions.
+    canvas: {
+        context: null,
+        width: canvasDefaults.width,
+        height: canvasDefaults.height,
+        framesPerSecond: canvasDefaults.framesPerSecond,
     },
-    lyricsRecordingMissingAudioMessage: 'Please insert the audio file first.',
-    lyricsRecordingChunkIntervalMs: 1000,
-    lyricsRecordingManualCaptureFrameRate: 0,
-    lyricsRecordingObjectUrlRevokeDelayMs: 60000,
-    lyricsRecordingStopOffsetSeconds: 0.05,
 
-    // Background Render Config
-    lyricsBackgroundMaxOpacity: 1,
-    lyricsBackgroundRevealThreshold: 0.3,
-    lyricsBackgroundRevealOverlayOpacity: 0.1,
-    lyricsBackgroundNextLinePreloadMs: 1000,
+    // Audio analysis and output.
+    audio: {
+        context: null,
+        analyser: null,
+        source: null,
+        frequencyData: null,
+        analyserOptions: {
+            fftSize: spectrumDefaults.fftSize,
+            smoothingFactor: spectrumDefaults.smoothingFactor,
+        },
+        bassFilter: {
+            type: 'lowshelf',
+            frequency: spectrumDefaults.bassFilterFrequency,
+            gainDecibels: spectrumDefaults.bassFilterGainDecibels,
+        },
+    },
 
-    // Overlay Render Config
-    lyricsOverlayMaxOpacity: 0.5,
-    lyricsOverlayOpacityReference: 0.95,
-    lyricsOverlayLineDurationSeconds: 6,
-    lyricsOverlayFadeDurationSeconds: 1,
-    lyricsOverlayHeaderFontSize: 48,
-    lyricsOverlayFooterFontSize: 32,
-    lyricsOverlayHeaderY: 120,
-    lyricsOverlayFooterBottomOffset: 120,
+    // Persisted data and IndexedDB.
+    storage: {
+        keys: storageKeys,
+        defaults: { lyrics: '', offset: '0' },
+        persistenceKeys: {
+            audio: 'persistent_audio_file',
+            background: 'persistent_bg_file',
+            intro: 'persistent_intro_file',
+            backgroundType: 'persistent_bg_type',
+            audioFileName: 'persistent_audio_name',
+        },
+        database: { name: 'LyricsAppDB', version: 1, storeName: 'AssetsStore' },
+    },
 
-    // Lyrics Render Config
-    lyricsLineFontSize: 82,
-    lyricsLineSpacing: 120,
-    lyricsLineBaseYRatio: parseFloat(localStorage.getItem(lyricsStorageKeys.lineBaseYRatio)) || 0.57,
-    lyricsInactiveLineOpacity: 0.5,
-    lyricsPreviousLineFadeOutMs: 200,
-    lyricsNextLineFadeInMs: 1000,
+    // Theme colors; current values are initialized from local storage.
+    colors: {
+        default: { background: '#000000', key: '#ffde59', text: '#ffffff' },
+        background: localStorage.getItem(storageKeys.colorBackground) || '#000000',
+        key: localStorage.getItem(storageKeys.colorKey) || '#ffde59',
+        text: localStorage.getItem(storageKeys.colorText) || '#ffffff',
+    },
 
-    // Display Version
-    lyricsDisplayVersion: localStorage.getItem(lyricsStorageKeys.displayVersion) || 'dual',
-    lyricsDisplayVersions: ['dual', 'triple'],
-    lyricsTripleShiftDurationMs: 500,
-    lyricsTripleFadeDurationMs: 450,
+    // Media types used by background and intro assets.
+    media: { types: { image: 'image', video: 'video' } },
 
-    // Spectrum Render Config
-    lyricsSpectrumBarsCount: 80,
-    lyricsSpectrumBarGap: 3,
-    lyricsSpectrumMaxHeightRatio: 0.12,
-    lyricsSpectrumThreshold: 5,
-    lyricsSpectrumGradientStartAlpha: 0.1,
-    lyricsSpectrumGradientEndAlpha: 0.9,
-    lyricsSpectrumInteractiveBoost: 0.3,
-    lyricsSpectrumEdgeScale: 0.98,
+    // Recording output and capture quality.
+    recording: {
+        mimeType: 'video/webm',
+        mimeTypesWithCodecs: ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'],
+        fileExtension: 'webm',
+        videoBitsPerSecond: 12000000,
+        audioBitsPerSecond: 192000,
+        buttonText: { idle: 'RECORD', active: 'RECORDING' },
+        chunkIntervalMilliseconds: 1000,
+        manualCaptureFrameRate: 0,
+        objectUrlRevokeDelayMilliseconds: 60000,
+        stopOffsetSeconds: 0.05,
+    },
 
-    // MP4 export
-    lyricsMp4Export: {
+    // Shared rendering dimensions, typography, and fade behavior.
+    rendering: {
+        lyrics: {
+            lyricFontSize: 82,
+            lineSpacing: 120,
+            defaultBaseYRatio: parseFloat(localStorage.getItem(storageKeys.lineBaseYRatio)) || 0.57,
+            inactiveLineOpacity: 0.5,
+            previousLineFadeOutMilliseconds: 200,
+            nextLineFadeInMilliseconds: 1000,
+            tripleShiftDurationMilliseconds: 500,
+            tripleFadeDurationMilliseconds: 450,
+            instrumentalSymbol: '♪',
+            fontFamily: '"Nexa Black", "Montserrat", "Arial Black", sans-serif',
+            maximumTextWidth: 1800,
+            lineHeightMultiplier: 1.15,
+        },
+        overlay: {
+            header: { fontSize: 48, topY: 120 },
+            footer: { fontSize: 32, bottomOffset: 120 },
+        },
+        fade: {
+            speedPerFrame: 0.01,
+            backgroundMaximumOpacity: 1,
+            backgroundRevealThreshold: 0.3,
+            backgroundRevealOverlayOpacity: 0.1,
+            backgroundPreloadMilliseconds: 1000,
+            overlayMaximumOpacity: 0.5,
+            overlayOpacityReference: 0.95,
+            overlayLineDurationSeconds: 6,
+            overlayFadeDurationSeconds: 1,
+        },
+    },
+
+    // Lyrics layout mode.
+    display: {
+        version: localStorage.getItem(storageKeys.displayVersion) || 'dual',
+        versions: ['dual', 'triple'],
+    },
+
+    // Spectrum visualization and offline analysis.
+    spectrum: {
+        ...spectrumDefaults,
+        binCount: spectrumDefaults.fftSize / 2,
+        minimumDecibels: -100,
+        maximumDecibels: -30,
+        barCount: readStoredNumberSetting(storageKeys.spectrumBarCount, spectrumDefaults.barCount, 1, 256, true),
+        barGap: readStoredNumberSetting(storageKeys.spectrumBarGap, spectrumDefaults.barGap, 0, 100),
+        peak: {
+            ...spectrumDefaults.peak,
+            enabled: storedSpectrumPeakEnabled === null ? spectrumDefaults.peak.enabled : storedSpectrumPeakEnabled === 'true',
+            thickness: readStoredNumberSetting(storageKeys.spectrumPeakThickness, spectrumDefaults.peak.thickness, 1, 24, true),
+            opacityPercent: readStoredNumberSetting(storageKeys.spectrumPeakOpacity, spectrumDefaults.peak.opacityPercent, 0, 100, true),
+            holdTimeMilliseconds: readStoredNumberSetting(storageKeys.spectrumPeakHoldTime, spectrumDefaults.peak.holdTimeMilliseconds, 0, 10_000, true),
+            fallingMode: spectrumPeakFallingModes.includes(storedSpectrumPeakFallingMode) ? storedSpectrumPeakFallingMode : spectrumDefaults.peak.fallingMode,
+            fallSpeedDecibelsPerSecond: readStoredNumberSetting(storageKeys.spectrumPeakFallSpeed, spectrumDefaults.peak.fallSpeedDecibelsPerSecond, 1, 100),
+        },
+        maximumHeightRatio: 0.12,
+        silenceThreshold: 5,
+        gradientStartAlpha: 0.1,
+        gradientEndAlpha: 0.9,
+        mouseBoostStrength: 0.3,
+        edgeScale: 0.98,
+    },
+
+    // Preview quality levels.
+    preview: {
+        defaultLevelIndex: 1,
+        defaultWidthLevels: [1920, 1280, 960, 640],
+        slowFrameCostMilliseconds: 10,
+        slowFramesBeforeDowngrade: 45,
+    },
+
+    // User-facing messages are kept together.
+    messages: {
+        missingAudio: 'Please insert the audio file first.',
+        media: {
+            audioLoadFailed: 'Audio resource failed to load.',
+            restoreIntroFailed: 'Failed to restore intro file:',
+            saveIntroFailed: 'Failed to save intro file:',
+            resumeAudioContextFailed: 'Failed to resume AudioContext:',
+        },
+        recording: {
+            disconnectAudioStreamFailed: 'Failed to disconnect recording audio stream:',
+            exportFailed: 'Export Error:',
+            videoConstraintsFailed: 'Failed to apply recording video constraints:',
+        },
+        templates: {
+            emptyState: 'No templates yet. Create your first template below.',
+            deleteConfirmation: 'Hapus template "{name}"?',
+            useAction: 'Use',
+            editAction: 'Edit',
+            deleteAction: 'Delete',
+        },
+        mp4Export: {
+            buttonIdle: 'EXPORT',
+            buttonActive: 'EXPORTING',
+            title: 'Export MP4',
+            unsupportedBrowser: 'This browser does not support WebCodecs MP4 export.',
+            stopRecording: 'Stop the recording before exporting MP4.',
+            analysisError: 'Spectrum analysis failed.',
+            workerAnalysisError: 'Spectrum analysis worker failed.',
+            workerAnalysisFailed: 'Spectrum analysis failed:',
+            noAudioEncoder: 'This browser does not support an AAC or Opus audio encoder.',
+            audioEncoderUnavailable: 'Audio encoder {codec} is unavailable:',
+            noVideoEncoder: 'This browser does not support H.264 WebCodecs. Use a recent version of Chrome or Edge.',
+            videoEncoderUnavailable: 'Video encoder {label} is unavailable:',
+            noEncoderFallback: 'All H.264 encoders failed.',
+            noCanvasContext: 'Could not create an offscreen canvas context.',
+            videoLoadError: 'Failed to load video media.',
+            videoSeekError: 'Failed to seek video media.',
+            videoSeekTimeout: 'Timed out while seeking video media.',
+            incompleteOutput: 'Incomplete output removed.',
+            incompleteOutputAbortFailed: 'Failed to abort incomplete MP4 output:',
+            incompleteOutputRemoveFailed: 'Failed to remove incomplete MP4 output:',
+            encoderFailed: 'Encoder "{encoder}" failed:',
+            audioFileLoadFailed: 'Failed to load audio file ({status}).',
+            introAudioUnavailable: 'Intro audio could not be decoded; exporting the intro without audio.',
+            exportCancelled: 'Export cancelled.',
+            exportError: 'Export error',
+            exportFailed: 'MP4 export failed:',
+            opusWarning: '\nThis browser lacks AAC encoding; use Chrome or Edge for broad compatibility.',
+            close: 'Close',
+            cancel: 'Cancel',
+            cancelling: 'Cancelling…',
+            preparing: 'Preparing\n…',
+            preparingMedia: 'Preparing audio & media\n…',
+            analyzingSpectrum: 'Analyzing audio spectrum',
+            encodingAudio: 'Encoding audio\n…',
+            finalizing: 'Finalizing MP4\n…',
+            saved: 'MP4 saved in the selected folder.',
+            downloaded: 'MP4 downloaded.',
+            noFolderFallback: 'Folder selection is unavailable; the MP4 will be downloaded instead.',
+            wakeLockRequestFailed: 'Could not prevent the screen from sleeping during export:',
+            wakeLockReleaseFailed: 'Could not release the export screen wake lock:',
+            encoderFallback: 'Encoder {encoder} failed,\ntrying {next}…',
+        },
+    },
+
+    // MP4 encoding and muxing settings.
+    mp4Export: {
         video: {
-            width: lyricsCanvasDefaults.width,
-            height: lyricsCanvasDefaults.height,
-            framesPerSecond: lyricsCanvasDefaults.framesPerSecond,
+            width: canvasDefaults.width,
+            height: canvasDefaults.height,
+            framesPerSecond: canvasDefaults.framesPerSecond,
             canvasAlpha: false,
             bitsPerSecond: 10_000_000,
             keyFrameIntervalInFrames: 120,
@@ -216,7 +346,7 @@ export const lyricsSettings = {
             latencyMode: 'realtime',
             bitrateMode: 'variable',
             fileExtension: 'mp4',
-            outputFileSuffix: `${lyricsCanvasDefaults.width}x${lyricsCanvasDefaults.height}_${lyricsCanvasDefaults.framesPerSecond}fps`,
+            outputFileSuffix: `${canvasDefaults.width}x${canvasDefaults.height}_${canvasDefaults.framesPerSecond}fps`,
         },
         audio: {
             sampleRate: 48_000,
@@ -237,12 +367,6 @@ export const lyricsSettings = {
             firstTimestampBehavior: 'offset',
             mimeType: 'video/mp4',
         },
-        spectrum: {
-            ...lyricsSpectrumDefaults,
-            binCount: lyricsSpectrumDefaults.fftSize / 2,
-            minimumDecibels: -100,
-            maximumDecibels: -30,
-        },
         timing: {
             seekTimeoutMs: 5_000,
             seekToleranceSeconds: 0.0005,
@@ -257,161 +381,10 @@ export const lyricsSettings = {
             analysisProgressWeight: 0.15,
             audioProgressWeight: 0.05,
             backgroundVideoDurationFallbackSeconds: 1,
-            microsecondsPerSecond: 1_000_000,
             audioInterleaveLookaheadSeconds: 1.5,
         },
         blobChunkSize: 1 << 22,
-        filePicker: { id: 'lyrics-export', mode: 'readwrite' },
+        filePicker: { id: defaultExportFileName, mode: 'readwrite' },
         wakeLockType: 'screen',
-        selectors: {
-            overlay: '.elememnt_dialog_export',
-            title: '.export_title',
-            status: '.export_status',
-            progressBar: '.export_bar',
-            cancelButton: '.export_cancel',
-        },
-        ui: {
-            buttonIdle: 'EXPORT',
-            buttonActive: 'EXPORTING',
-            analysisButtonFailure: 'FAILURE ANALYSIS',
-            analysisButtonProgress: 'ANALYSIS',
-            title: 'Export MP4',
-            unsupportedBrowser: 'This browser does not support WebCodecs MP4 export.',
-            stopRecording: 'Stop the recording before exporting MP4.',
-            missingAudio: 'Please insert the audio file first.',
-            analysisError: 'Spectrum analysis failed.',
-            noAudioEncoder: 'This browser does not support an AAC or Opus audio encoder.',
-            noVideoEncoder: 'This browser does not support H.264 WebCodecs. Use a recent version of Chrome or Edge.',
-            noEncoderFallback: 'All H.264 encoders failed.',
-            noCanvasContext: 'Could not create an offscreen canvas context.',
-            videoLoadError: 'Failed to load video media.',
-            videoSeekError: 'Failed to seek video media.',
-            videoSeekTimeout: 'Timed out while seeking video media.',
-            incompleteOutput: 'Incomplete output removed.',
-            exportCancelled: 'Export cancelled.',
-            exportError: 'Export error',
-            exportFailed: 'MP4 export failed:',
-            opusWarning: '\nThis browser lacks AAC encoding; use Chrome or Edge for broad compatibility.',
-            close: 'Close',
-            cancel: 'Cancel',
-            cancelling: 'Cancelling…',
-            preparing: 'Preparing\n…',
-            preparingMedia: 'Preparing audio & media\n…',
-            analyzingSpectrum: 'Analyzing audio spectrum',
-            encodingAudio: 'Encoding audio\n…',
-            finalizing: 'Finalizing MP4\n…',
-            saved: 'MP4 saved in the selected folder.',
-            downloaded: 'MP4 downloaded.',
-            noFolderFallback: 'Folder selection is unavailable; the MP4 will be downloaded instead.',
-            wakeLockRequestFailed: 'Could not prevent the screen from sleeping during export:',
-            wakeLockReleaseFailed: 'Could not release the export screen wake lock:',
-            encoderFallback: 'Encoder {encoder} failed,\ntrying {next}…',
-            progressStatus: '⛶ {frame}/{total} · ᯓ {fps} fps · ⏱ {elapsed} · ⏲ {remaining}',
-        },
     },
 };
-
-export const lyricsBetaSettings = {
-    storageKeys: lyricsStorageKeys,
-    persistenceKeys: {
-        audioFile: lyricsSettings.lyricsPersistenceKeys.audio,
-        backgroundFile: lyricsSettings.lyricsPersistenceKeys.background,
-        introFile: lyricsSettings.lyricsPersistenceKeys.intro,
-        backgroundType: lyricsSettings.lyricsPersistenceKeys.bgType,
-        audioFileName: lyricsSettings.lyricsPersistenceKeys.audioFileName,
-    },
-    database: {
-        name: lyricsSettings.lyricsDatabaseName,
-        version: lyricsSettings.lyricsDatabaseVersion,
-        storeName: lyricsSettings.lyricsDatabaseStoreName,
-    },
-    selectors: {
-        elementPreviewCanvas: lyricsSettings.elementSelectorCanvas,
-        elementAudio: lyricsSettings.elementSelectorAudio,
-        audioFileInput: lyricsSettings.elementSelectorInputAudio,
-        offsetInput: lyricsSettings.elementSelectorInputOffset,
-        backgroundFileInput: lyricsSettings.elementSelectorInputBackground,
-        spectrumCheckbox: lyricsSettings.elementSelectorInputSpectrum,
-        displayModeRadios: lyricsSettings.elementSelectorRadioDisplayVersion,
-        introFileInput: lyricsSettings.elementSelectorInputIntro,
-        removeAudioButton: lyricsSettings.elementSelectorButtonRemoveAudio,
-        removeBackgroundButton: lyricsSettings.elementSelectorButtonRemoveBackground,
-        removeIntroButton: lyricsSettings.elementSelectorButtonRemoveIntro,
-        lyricsTextarea: lyricsSettings.elementSelectorTextareaLyrics,
-        headerTextarea: lyricsSettings.elementSelectorTextareaHeader,
-        footerTextarea: lyricsSettings.elementSelectorTextareaFooter,
-        exportButton: lyricsSettings.elementSelectorButtonExport,
-        fullscreenButton: lyricsSettings.elementSelectorButtonFullscreen,
-        controlContainer: lyricsSettings.elementSelectorContainerControl,
-        backgroundColorInput: lyricsSettings.elementSelectorColorBackground,
-        keyColorInput: lyricsSettings.elementSelectorColorKey,
-        textColorInput: lyricsSettings.elementSelectorColorText,
-        templateDialogs: lyricsSettings.elementSelectorTemplateDialogs,
-        exportOverlay: lyricsSettings.lyricsMp4Export.selectors.overlay,
-        exportTitle: lyricsSettings.lyricsMp4Export.selectors.title,
-        exportStatus: lyricsSettings.lyricsMp4Export.selectors.status,
-        exportProgressBar: lyricsSettings.lyricsMp4Export.selectors.progressBar,
-        exportCancelButton: lyricsSettings.lyricsMp4Export.selectors.cancelButton,
-    },
-    design: { width: lyricsCanvasDefaults.width, height: lyricsCanvasDefaults.height },
-    videoExport: lyricsSettings.lyricsMp4Export.video,
-    audioExport: lyricsSettings.lyricsMp4Export.audio,
-    muxerExport: lyricsSettings.lyricsMp4Export.muxer,
-    exportTiming: { ...lyricsSettings.lyricsMp4Export.timing, seekTimeoutMs: 1_500 },
-    blobChunkSize: lyricsSettings.lyricsMp4Export.blobChunkSize,
-    filePicker: lyricsSettings.lyricsMp4Export.filePicker,
-    wakeLockType: lyricsSettings.lyricsMp4Export.wakeLockType,
-    exportUi: lyricsSettings.lyricsMp4Export.ui,
-    spectrum: {
-        ...lyricsSettings.lyricsMp4Export.spectrum,
-        barCount: lyricsSettings.lyricsSpectrumBarsCount,
-        barGap: lyricsSettings.lyricsSpectrumBarGap,
-        maximumHeightRatio: lyricsSettings.lyricsSpectrumMaxHeightRatio,
-        silenceThreshold: lyricsSettings.lyricsSpectrumThreshold,
-        gradientStartAlpha: lyricsSettings.lyricsSpectrumGradientStartAlpha,
-        gradientEndAlpha: lyricsSettings.lyricsSpectrumGradientEndAlpha,
-        mouseBoostStrength: lyricsSettings.lyricsSpectrumInteractiveBoost,
-        edgeScale: lyricsSettings.lyricsSpectrumEdgeScale,
-    },
-    lyricsStyle: {
-        fontFamily: '"Nexa Black", "Montserrat", "Arial Black", sans-serif',
-        lyricFontSize: lyricsSettings.lyricsLineFontSize,
-        lineSpacing: lyricsSettings.lyricsLineSpacing,
-        defaultBaseYRatio: lyricsSettings.lyricsLineBaseYRatio,
-        inactiveLineOpacity: lyricsSettings.lyricsInactiveLineOpacity,
-        previousLineFadeOutMilliseconds: lyricsSettings.lyricsPreviousLineFadeOutMs,
-        nextLineFadeInMilliseconds: lyricsSettings.lyricsNextLineFadeInMs,
-        tripleShiftDurationMilliseconds: lyricsSettings.lyricsTripleShiftDurationMs,
-        tripleFadeDurationMilliseconds: lyricsSettings.lyricsTripleFadeDurationMs,
-        instrumentalSymbol: lyricsSettings.lyricsInstrumentalSymbol,
-        maximumTextWidth: 1800,
-        lineHeightMultiplier: 1.15,
-        headerFontSize: lyricsSettings.lyricsOverlayHeaderFontSize,
-        headerTopY: lyricsSettings.lyricsOverlayHeaderY,
-        footerFontSize: lyricsSettings.lyricsOverlayFooterFontSize,
-        footerBottomOffset: lyricsSettings.lyricsOverlayFooterBottomOffset,
-    },
-    fadeStyle: {
-        speedPerFrame: lyricsSettings.lyricsFadeSpeed,
-        backgroundMaximumOpacity: lyricsSettings.lyricsBackgroundMaxOpacity,
-        backgroundRevealThreshold: lyricsSettings.lyricsBackgroundRevealThreshold,
-        backgroundRevealOverlayOpacity: lyricsSettings.lyricsBackgroundRevealOverlayOpacity,
-        backgroundPreloadMilliseconds: lyricsSettings.lyricsBackgroundNextLinePreloadMs,
-        overlayMaximumOpacity: lyricsSettings.lyricsOverlayMaxOpacity,
-        overlayOpacityReference: lyricsSettings.lyricsOverlayOpacityReference,
-        overlayLineDurationSeconds: lyricsSettings.lyricsOverlayLineDurationSeconds,
-        overlayFadeDurationSeconds: lyricsSettings.lyricsOverlayFadeDurationSeconds,
-    },
-    preview: {
-        defaultLevelIndex: 1,
-        defaultWidthLevels: [1920, 1280, 960, 640],
-        slowFrameCostMilliseconds: 10,
-        slowFramesBeforeDowngrade: 45,
-    },
-    defaultColors: {
-        background: lyricsSettings.lyricsDefaultBackgroundColor,
-        key: lyricsSettings.lyricsDefaultKeyColor,
-        text: lyricsSettings.lyricsDefaultNonActiveTextColor,
-    },
-};
-

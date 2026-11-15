@@ -21,7 +21,7 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">Stable v2.0</div>
+                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">Stable v4</div>
                 </div>
             </header>
 
@@ -168,6 +168,59 @@
                                 <input type="checkbox" class="element_input_spectrum peer sr-only" checked />
                                 <div class="peer-checked:after:border-text bg-foreground peer-checked:bg-key after:border-text after:bg-text peer h-6 w-11 rounded-full after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-focus:outline-none"></div>
                             </label>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 border-t border-border pt-4">
+                            <label class="space-y-1">
+                                <span class="text-meta block text-xs font-semibold">Bar count</span>
+                                <input type="number" min="1" max="256" step="1" class="element_input_spectrum_bar_count border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
+                            </label>
+
+                            <label class="space-y-1">
+                                <span class="text-meta block text-xs font-semibold">Bar margin (px)</span>
+                                <input type="number" min="0" max="100" step="1" class="element_input_spectrum_bar_gap border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
+                            </label>
+                        </div>
+
+                        <div class="space-y-3 border-t border-border pt-4">
+                            <label class="flex cursor-pointer items-center justify-between gap-3">
+                                <span class="text-meta text-xs font-semibold">Peak marker</span>
+                                <input type="checkbox" class="element_input_spectrum_peak_enabled accent-key h-4 w-4" />
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="space-y-1">
+                                    <span class="text-meta block text-xs font-semibold">Peak thickness (px)</span>
+                                    <input type="number" min="1" max="24" step="1" class="element_input_spectrum_peak_thickness border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
+                                </label>
+
+                                <label class="space-y-1">
+                                    <span class="text-meta flex items-center justify-between text-xs font-semibold">
+                                        <span>Peak opacity</span>
+                                        <output class="text-key">85%</output>
+                                    </span>
+                                    <input type="range" min="0" max="100" step="1" class="element_input_spectrum_peak_opacity accent-key w-full" />
+                                </label>
+
+                                <label class="space-y-1">
+                                    <span class="text-meta block text-xs font-semibold">Peak hold (ms)</span>
+                                    <input type="number" min="0" max="10000" step="50" class="element_input_spectrum_peak_hold_time border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
+                                </label>
+
+                                <label class="space-y-1">
+                                    <span class="text-meta block text-xs font-semibold">Peak falling</span>
+                                    <select class="element_input_spectrum_peak_falling_mode border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs">
+                                        <option value="steady">Steady</option>
+                                        <option value="gravity">Gravity</option>
+                                        <option value="fade-out">Fade out</option>
+                                    </select>
+                                </label>
+
+                                <label class="col-span-2 space-y-1">
+                                    <span class="text-meta block text-xs font-semibold">Peak fall speed (dB/s)</span>
+                                    <input type="number" min="1" max="100" step="1" class="element_input_spectrum_peak_fall_speed border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
+                                </label>
+                            </div>
                         </div>
                     </div>
 

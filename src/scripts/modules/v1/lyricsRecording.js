@@ -7,18 +7,8 @@ import { lyricsLoopsStartPreviewLoop, lyricsLoopsStopPreviewLoop } from './lyric
 
 let recordingIntroStop = null;
 
-const recordingGetAudioContext = () => lyricsSettings.lyricsAudioContext || new (window.AudioContext || window.webkitAudioContext)();
-
-const recordingWaitForMediaEnd = (mediaElement) => new Promise((resolve) => {
-    const handleEnded = () => {
-        mediaElement.removeEventListener('ended', handleEnded);
-        resolve();
-    };
-    mediaElement.addEventListener('ended', handleEnded, { once: true });
-});
-
 const recordingPrepareIntro = (recordingStream) => {
-    const inputElement = document.querySelector(lyricsSettings.elementSelectorInputIntro);
+    const inputElement = document.querySelector(lyricsSettings.selectors.elementInput.intro);
     const introFile = inputElement?.files?.[0];
     if (!introFile) return null;
 
@@ -40,12 +30,12 @@ const recordingPrepareIntro = (recordingStream) => {
 };
 
 const recordingMirrorPreview = (sourceCanvas, lastPreviewTime = 0, force = false) => {
-    const previewCanvas = lyricsSettings.lyricsCanvasContext?.canvas;
+    const previewCanvas = lyricsSettings.canvas.context?.canvas;
     if (!previewCanvas || (!force && performance.now() - lastPreviewTime < 100)) {
         return lastPreviewTime;
     }
 
-    lyricsSettings.lyricsCanvasContext.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+    lyricsSettings.canvas.context.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
     return performance.now();
 };
 
@@ -53,10 +43,10 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
     if (!intro) return true;
 
     const { introElement, introUrl, introIsVideo } = intro;
-    lyricsSettings.lyricsStateIsRecordingIntro = true;
-    lyricsSettings.lyricsRecordingIntroType = introIsVideo ? 'video' : 'audio';
-    lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
-    lyricsSettings.lyricsOverlayCurrentOpacity = 0;
+    lyricsSettings.state.isRecordingIntro = true;
+    lyricsSettings.state.recordingIntroType = introIsVideo ? 'video' : 'audio';
+    lyricsSettings.state.backgroundOpacity = 0;
+    lyricsSettings.state.overlayOpacity = 0;
     let introFrameRequestID = null;
     const stopIntroFrameTimer = () => {
         if (introFrameRequestID) {
@@ -82,13 +72,13 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
                 lastPreviewMirrorTime = recordingMirrorPreview(exportCanvas, lastPreviewMirrorTime);
                 recordingStream.requestVideoFrame();
             } else if (introElement.tagName === 'AUDIO') {
-                lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
+                lyricsSettings.state.backgroundOpacity = 0;
                 lyricsRenderingCoreRender(0, exportContext);
                 lastPreviewMirrorTime = recordingMirrorPreview(exportCanvas, lastPreviewMirrorTime);
                 recordingStream.requestVideoFrame();
             }
-            if (!introElement.ended && lyricsSettings.lyricsStateIsRecording) {
-                introFrameRequestID = setTimeout(renderIntroFrame, lyricsSettings.lyricsMillisecondsPerSecond / lyricsSettings.lyricsFramesPerSecond);
+            if (!introElement.ended && lyricsSettings.state.isRecording) {
+                introFrameRequestID = setTimeout(renderIntroFrame, 1000 / lyricsSettings.canvas.framesPerSecond);
             }
         };
         if (!introIsVideo) {
@@ -98,7 +88,7 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
         }
         await introElement.play();
         renderIntroFrame();
-        await recordingWaitForMediaEnd(introElement);
+        await new Promise((resolve) => introElement.addEventListener('ended', resolve, { once: true }));
         if (introElement.tagName === 'VIDEO') {
             introElement.style.opacity = '0';
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -106,10 +96,10 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
         return true;
     } finally {
         stopIntroFrameTimer();
-        lyricsSettings.lyricsStateIsRecordingIntro = false;
-        lyricsSettings.lyricsRecordingIntroType = null;
-        lyricsSettings.lyricsBackgroundCurrentOpacity = 0;
-        lyricsSettings.lyricsOverlayCurrentOpacity = 0;
+        lyricsSettings.state.isRecordingIntro = false;
+        lyricsSettings.state.recordingIntroType = null;
+        lyricsSettings.state.backgroundOpacity = 0;
+        lyricsSettings.state.overlayOpacity = 0;
         introElement.pause();
         introElement.remove();
         URL.revokeObjectURL(introUrl);
@@ -117,18 +107,12 @@ const recordingPlayIntro = async (recordingStream, exportCanvas, exportContext, 
     }
 };
 
-const recordingGetSupportedMimeType = () => lyricsSettings.lyricsRecordingMimeTypesWithCodecs.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
-
-const recordingAddMediaTracks = (targetStream, mediaTracks) => {
-    mediaTracks.forEach((mediaTrack) => targetStream.addTrack(mediaTrack));
-};
-
 const recordingCreateAudioMediaStream = (audioElement) => {
-    const audioContext = recordingGetAudioContext();
+    const audioContext = lyricsSettings.audio.context || new (window.AudioContext || window.webkitAudioContext)();
     const destination = audioContext.createMediaStreamDestination();
     const sources = [];
     const connectElement = (element) => {
-        const source = element === audioElement && lyricsSettings.lyricsAudioSource ? lyricsSettings.lyricsAudioSource : audioContext.createMediaElementSource(element);
+        const source = element === audioElement && lyricsSettings.audio.source ? lyricsSettings.audio.source : audioContext.createMediaElementSource(element);
         source.connect(destination);
         // The intro must be monitored while recording as well as captured.
         if (element !== audioElement && element.tagName === 'AUDIO') {
@@ -145,7 +129,7 @@ const recordingCreateAudioMediaStream = (audioElement) => {
             try {
                 source.disconnect(destination);
             } catch (errorEvent) {
-                console.error('Failed to disconnect recording audio stream:', errorEvent);
+                console.error(lyricsSettings.messages.recording.disconnectAudioStreamFailed, errorEvent);
             }
         }),
     };
@@ -153,7 +137,7 @@ const recordingCreateAudioMediaStream = (audioElement) => {
 
 export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
     if (!audioElement.src) {
-        alert(lyricsSettings.lyricsRecordingMissingAudioMessage);
+        alert(lyricsSettings.messages.missingAudio);
 
         return;
     }
@@ -161,7 +145,7 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
     lyricsRecordingSetButtonState(buttonElement, true);
 
     lyricsLoopsStopPreviewLoop();
-    lyricsSettings.lyricsStateIsRecording = true;
+    lyricsSettings.state.isRecording = true;
 
     try {
         audioElement.pause();
@@ -170,13 +154,13 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
         await lyricsMediaEnsureAudioContextActive();
 
         const exportCanvas = lyricsRecordingCreateCanvas();
-        const exportContext = exportCanvas.getContext(lyricsSettings.lyricsCanvasContextType, lyricsSettings.lyricsCanvasContextOptions);
+        const exportContext = exportCanvas.getContext('2d', { alpha: true });
         const recordingStream = lyricsRecordingCreateStream(exportCanvas, audioElement);
         const intro = recordingPrepareIntro(recordingStream);
         const mediaRecorder = lyricsRecordingCreateMediaRecorder(recordingStream.stream);
         const recordingChunks = [];
 
-        lyricsSettings.lyricsRecordingMediaRecorder = mediaRecorder;
+        lyricsSettings.state.recordingMediaRecorder = mediaRecorder;
 
         let recordingFrameTimeoutId = null;
         let lastPreviewMirrorTime = 0;
@@ -190,14 +174,14 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
             lyricsRecordingDownload(recordingChunks);
 
             recordingStream.cleanup();
-            lyricsSettings.lyricsRecordingMediaRecorder = null;
-            lyricsSettings.lyricsStateIsRecording = false;
-            lyricsSettings.lyricsRecordingMainTransitionPending = false;
+            lyricsSettings.state.recordingMediaRecorder = null;
+            lyricsSettings.state.isRecording = false;
+            lyricsSettings.state.recordingMainTransitionPending = false;
 
             audioElement.pause();
             audioElement.currentTime = 0;
             lyricsRecordingSetButtonState(buttonElement, false);
-            lyricsRenderingCoreRender(0, lyricsSettings.lyricsCanvasContext);
+            lyricsRenderingCoreRender(0, lyricsSettings.canvas.context);
             lyricsLoopsStopPreviewLoop();
         };
 
@@ -209,18 +193,18 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
 
         mediaRecorder.onstop = recordingFinishRecording;
 
-        const frameIntervalMilliseconds = lyricsSettings.lyricsMillisecondsPerSecond / lyricsSettings.lyricsFramesPerSecond;
+        const frameIntervalMilliseconds = 1000 / lyricsSettings.canvas.framesPerSecond;
 
         const recordingRenderExportFrame = () => {
-            if (!lyricsSettings.lyricsStateIsRecording) {
+            if (!lyricsSettings.state.isRecording) {
                 return;
             }
 
-            lyricsRenderingCoreRender(audioElement.currentTime * lyricsSettings.lyricsMillisecondsPerSecond, exportContext);
+            lyricsRenderingCoreRender(audioElement.currentTime * 1000, exportContext);
             lastPreviewMirrorTime = recordingMirrorPreview(exportCanvas, lastPreviewMirrorTime);
             recordingStream.requestVideoFrame();
 
-            if (audioElement.ended || audioElement.currentTime >= audioElement.duration - lyricsSettings.lyricsRecordingStopOffsetSeconds) {
+            if (audioElement.ended || audioElement.currentTime >= audioElement.duration - lyricsSettings.recording.stopOffsetSeconds) {
                 lyricsRecordingStop();
                 audioElement.pause();
 
@@ -230,17 +214,17 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
             recordingFrameTimeoutId = setTimeout(recordingRenderExportFrame, frameIntervalMilliseconds);
         };
 
-        mediaRecorder.start(lyricsSettings.lyricsRecordingChunkIntervalMs);
+        mediaRecorder.start(lyricsSettings.recording.chunkIntervalMilliseconds);
 
         await recordingPlayIntro(recordingStream, exportCanvas, exportContext, intro);
         // Keep the intro's visual state for the first main frame; subsequent frames use normal timing effects.
         // Overlay should start at 0 and fade in naturally with background
-        lyricsSettings.lyricsOverlayCurrentOpacity = 0;
+        lyricsSettings.state.overlayOpacity = 0;
         lyricsRenderingCoreRender(0, exportContext);
-        lyricsSettings.lyricsRecordingMainTransitionPending = false;
+        lyricsSettings.state.recordingMainTransitionPending = false;
         recordingMirrorPreview(exportCanvas, 0, true);
         recordingStream.requestVideoFrame();
-        if (!lyricsSettings.lyricsStateIsRecording) {
+        if (!lyricsSettings.state.isRecording) {
             audioElement.pause();
             audioElement.currentTime = 0;
             if (mediaRecorder.state === 'recording') {
@@ -254,10 +238,10 @@ export const lyricsRecordingStart = async ({ audioElement, buttonElement }) => {
 
         recordingRenderExportFrame();
     } catch (errorEvent) {
-        console.error('Export Error:', errorEvent);
-        lyricsSettings.lyricsRecordingMediaRecorder = null;
-        lyricsSettings.lyricsStateIsRecording = false;
-        lyricsSettings.lyricsRecordingMainTransitionPending = false;
+        console.error(lyricsSettings.messages.recording.exportFailed, errorEvent);
+        lyricsSettings.state.recordingMediaRecorder = null;
+        lyricsSettings.state.isRecording = false;
+        lyricsSettings.state.recordingMainTransitionPending = false;
 
         lyricsRecordingSetButtonState(buttonElement, false);
 
@@ -275,18 +259,18 @@ export const lyricsRecordingSetButtonState = (buttonElement, isRecording) => {
     buttonElement.classList.toggle('bg-key', !isRecording);
     buttonElement.classList.toggle('border-red', isRecording);
     buttonElement.classList.toggle('bg-red', isRecording);
-    buttonElement.textContent = isRecording ? lyricsSettings.lyricsRecordingButtonText.active : lyricsSettings.lyricsRecordingButtonText.idle;
+    buttonElement.textContent = isRecording ? lyricsSettings.recording.buttonText.active : lyricsSettings.recording.buttonText.idle;
 };
 
 export const lyricsRecordingStop = () => {
     if (recordingIntroStop) {
         recordingIntroStop();
         recordingIntroStop = null;
-        lyricsSettings.lyricsStateIsRecording = false;
+        lyricsSettings.state.isRecording = false;
         return;
     }
 
-    const mediaRecorder = lyricsSettings.lyricsRecordingMediaRecorder;
+    const mediaRecorder = lyricsSettings.state.recordingMediaRecorder;
 
     if (!mediaRecorder || mediaRecorder.state !== 'recording') {
         return;
@@ -298,32 +282,32 @@ export const lyricsRecordingStop = () => {
 
 export const lyricsRecordingCreateCanvas = () => {
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = lyricsSettings.lyricsPreviewWidth;
-    exportCanvas.height = lyricsSettings.lyricsPreviewHeight;
+    exportCanvas.width = lyricsSettings.canvas.width;
+    exportCanvas.height = lyricsSettings.canvas.height;
 
     return exportCanvas;
 };
 
 export const lyricsRecordingDownload = (recordingChunks) => {
     const finalBlob = new Blob(recordingChunks, {
-        type: lyricsSettings.lyricsRecordingMimeType,
+        type: lyricsSettings.recording.mimeType,
     });
 
     const downloadUrl = URL.createObjectURL(finalBlob);
     const hiddenLink = document.createElement('a');
 
     hiddenLink.href = downloadUrl;
-    hiddenLink.download = `${lyricsSettings.lyricsExportFileName}.${lyricsSettings.lyricsRecordingFileExtension}`;
+    hiddenLink.download = `${lyricsSettings.export.fileName}.${lyricsSettings.recording.fileExtension}`;
     hiddenLink.click();
 
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), lyricsSettings.lyricsRecordingObjectUrlRevokeDelayMs);
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), lyricsSettings.recording.objectUrlRevokeDelayMilliseconds);
 };
 
 export const lyricsRecordingCreateMediaRecorder = (stream) => {
-    const supportedMimeType = recordingGetSupportedMimeType();
+    const supportedMimeType = lyricsSettings.recording.mimeTypesWithCodecs.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
     const recorderOptions = {
-        videoBitsPerSecond: lyricsSettings.lyricsRecordingVideoBitsPerSecond,
-        audioBitsPerSecond: lyricsSettings.lyricsRecordingAudioBitsPerSecond,
+        videoBitsPerSecond: lyricsSettings.recording.videoBitsPerSecond,
+        audioBitsPerSecond: lyricsSettings.recording.audioBitsPerSecond,
     };
 
     if (supportedMimeType) {
@@ -339,7 +323,7 @@ export const lyricsRecordingCreateStream = (canvasElement, audioElement) => {
     const isFirefox = /Firefox\//.test(navigator.userAgent);
     // Firefox is more reliable with the browser's automatic capture cadence.
     // Other browsers use manual capture so each rendered frame is captured once.
-    const manualCaptureFrameRate = lyricsSettings.lyricsRecordingManualCaptureFrameRate;
+    const manualCaptureFrameRate = lyricsSettings.recording.manualCaptureFrameRate;
     const videoStream = isFirefox
         ? canvasElement.captureStream()
         : canvasElement.captureStream(manualCaptureFrameRate);
@@ -354,18 +338,18 @@ export const lyricsRecordingCreateStream = (canvasElement, audioElement) => {
             videoTrack
                 .applyConstraints({
                     frameRate: {
-                        ideal: lyricsSettings.lyricsFramesPerSecond,
-                        max: lyricsSettings.lyricsFramesPerSecond,
+                        ideal: lyricsSettings.canvas.framesPerSecond,
+                        max: lyricsSettings.canvas.framesPerSecond,
                     },
                 })
                 .catch((errorEvent) => {
-                    console.warn('Failed to apply recording video constraints:', errorEvent);
+                    console.warn(lyricsSettings.messages.recording.videoConstraintsFailed, errorEvent);
                 });
         }
     }
 
-    recordingAddMediaTracks(combinedStream, videoStream.getVideoTracks());
-    recordingAddMediaTracks(combinedStream, audioStream.stream.getAudioTracks());
+    videoStream.getVideoTracks().forEach((mediaTrack) => combinedStream.addTrack(mediaTrack));
+    audioStream.stream.getAudioTracks().forEach((mediaTrack) => combinedStream.addTrack(mediaTrack));
 
     return {
         stream: combinedStream,

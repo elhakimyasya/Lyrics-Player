@@ -2,7 +2,7 @@ import { lyricsSettings } from './lyricsSettings';
 import { lyricsStorageLoad, lyricsStorageSave } from './lyricsStorage';
 import { lyricsLoopsRenderPreviewFrameWhenIdle } from './lyricsLoops';
 
-const templatesKey = (templateType) => templateType === 'header' ? lyricsSettings.lyricsStorageKeys.headerTemplates : lyricsSettings.lyricsStorageKeys.footerTemplates;
+const templatesKey = (templateType) => templateType === 'header' ? lyricsSettings.storage.keys.headerTemplates : lyricsSettings.storage.keys.footerTemplates;
 const templatesRead = (templateType) => JSON.parse(lyricsStorageLoad(templatesKey(templateType), '[]'));
 const templatesWrite = (templateType, templates) => lyricsStorageSave(templatesKey(templateType), JSON.stringify(templates));
 
@@ -14,7 +14,7 @@ const templatesRenderList = (dialog, templateType) => {
     if (!templates.length) {
         const emptyState = document.createElement('div');
         emptyState.className = 'border-border text-meta rounded-2xl border border-dashed p-8 text-center text-sm';
-        emptyState.textContent = 'No templates yet. Create your first template below.';
+        emptyState.textContent = lyricsSettings.messages.templates.emptyState;
         list.append(emptyState);
         return;
     }
@@ -43,17 +43,17 @@ const templatesRenderList = (dialog, templateType) => {
             return actionButton;
         };
 
-        const useButton = createTemplateAction('Use', 'bg-teal text-background hover:brightness-110');
+        const useButton = createTemplateAction(lyricsSettings.messages.templates.useAction, 'bg-teal text-background hover:brightness-110');
         useButton.addEventListener('click', () => {
-            const textareaSelector = templateType === 'header' ? lyricsSettings.elementSelectorTextareaHeader : lyricsSettings.elementSelectorTextareaFooter;
-            const storageKey = templateType === 'header' ? lyricsSettings.lyricsStorageKeys.lyricsHeader : lyricsSettings.lyricsStorageKeys.lyricsFooter;
+            const textareaSelector = templateType === 'header' ? lyricsSettings.selectors.elementTextarea.header : lyricsSettings.selectors.elementTextarea.footer;
+            const storageKey = templateType === 'header' ? lyricsSettings.storage.keys.lyricsHeader : lyricsSettings.storage.keys.lyricsFooter;
             document.querySelector(textareaSelector).value = template.content;
             lyricsStorageSave(storageKey, template.content);
-            lyricsLoopsRenderPreviewFrameWhenIdle(document.querySelector(lyricsSettings.elementSelectorAudio));
+            lyricsLoopsRenderPreviewFrameWhenIdle(document.querySelector(lyricsSettings.selectors.elementAudio));
             dialog.close();
         });
 
-        const editButton = createTemplateAction('Edit', 'border-border border text-text');
+        const editButton = createTemplateAction(lyricsSettings.messages.templates.editAction, 'border-border border text-text');
         editButton.addEventListener('click', () => {
             const form = dialog.querySelector('.element_template_form');
             form.elements.name.value = template.name;
@@ -62,9 +62,9 @@ const templatesRenderList = (dialog, templateType) => {
             form.elements.name.focus();
         });
 
-        const deleteButton = createTemplateAction('Delete', 'text-red hover:bg-red/10');
+        const deleteButton = createTemplateAction(lyricsSettings.messages.templates.deleteAction, 'text-red hover:bg-red/10');
         deleteButton.addEventListener('click', () => {
-            if (!confirm(`Hapus template "${template.name}"?`)) return;
+            if (!confirm(lyricsSettings.messages.templates.deleteConfirmation.replace('{name}', template.name))) return;
             templates.splice(templateIndex, 1);
             templatesWrite(templateType, templates);
             templatesRenderList(dialog, templateType);

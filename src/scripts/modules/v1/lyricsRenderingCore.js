@@ -7,14 +7,14 @@ import { lyricsRenderingEffectsRenderSpectrumLayer } from './lyricsRenderingEffe
 
 const renderingCoreFindActiveLineIndex = (adjustedRenderTime) => {
     let activeLineIndex = -1;
-    const totalLines = lyricsSettings.lyricsDataParsed.length;
+    const totalLines = lyricsSettings.state.parsedLyrics.length;
 
     if (totalLines === 0) {
         return -1;
     }
 
     for (let index = 0; index < totalLines; index++) {
-        if (lyricsSettings.lyricsDataParsed[index].timeMs <= adjustedRenderTime) {
+        if (lyricsSettings.state.parsedLyrics[index].timeMs <= adjustedRenderTime) {
             activeLineIndex = index;
         } else {
             break;
@@ -26,13 +26,13 @@ const renderingCoreFindActiveLineIndex = (adjustedRenderTime) => {
 };
 
 const renderingCoreGetLineTexts = (activeLineIndex, totalLines) => {
-    const textActiveRaw = activeLineIndex >= 0 ? lyricsSettings.lyricsDataParsed[activeLineIndex]?.text || '' : '';
-    const textNextRaw = activeLineIndex + 1 < totalLines ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].text || '' : '';
-    const textPreviousRaw = activeLineIndex > 0 ? lyricsSettings.lyricsDataParsed[activeLineIndex - 1].text : '';
+    const textActiveRaw = activeLineIndex >= 0 ? lyricsSettings.state.parsedLyrics[activeLineIndex]?.text || '' : '';
+    const textNextRaw = activeLineIndex + 1 < totalLines ? lyricsSettings.state.parsedLyrics[activeLineIndex + 1].text || '' : '';
+    const textPreviousRaw = activeLineIndex > 0 ? lyricsSettings.state.parsedLyrics[activeLineIndex - 1].text : '';
 
-    const isCurrentInstrumental = textActiveRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
-    const isNextInstrumental = textNextRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
-    const isPreviousInstrumental = textPreviousRaw.includes(lyricsSettings.lyricsInstrumentalSymbol);
+    const isCurrentInstrumental = textActiveRaw.includes(lyricsSettings.rendering.lyrics.instrumentalSymbol);
+    const isNextInstrumental = textNextRaw.includes(lyricsSettings.rendering.lyrics.instrumentalSymbol);
+    const isPreviousInstrumental = textPreviousRaw.includes(lyricsSettings.rendering.lyrics.instrumentalSymbol);
 
     return {
         textActiveRaw,
@@ -53,30 +53,30 @@ const renderingCoreGetAnimationProgress = (lineState, adjustedRenderTime) => {
 
 const renderingCoreGetPreviousLineAlpha = (lineState, adjustedRenderTime, animationProgress) => {
     if (lineState.isCurrentInstrumental || lineState.isEnding) {
-        return Math.max(0, (1 - (adjustedRenderTime - lineState.currentLineStart) / lyricsSettings.lyricsPreviousLineFadeOutMs) * lyricsSettings.lyricsInactiveLineOpacity);
+        return Math.max(0, (1 - (adjustedRenderTime - lineState.currentLineStart) / lyricsSettings.rendering.lyrics.previousLineFadeOutMilliseconds) * lyricsSettings.rendering.lyrics.inactiveLineOpacity);
     }
 
-    return (1 - animationProgress) * lyricsSettings.lyricsInactiveLineOpacity;
+    return (1 - animationProgress) * lyricsSettings.rendering.lyrics.inactiveLineOpacity;
 };
 
 const renderingCoreGetNextLineAlpha = (lineState) => {
-    if (lineState.timeUntilNextLine > lyricsSettings.lyricsNextLineFadeInMs) {
+    if (lineState.timeUntilNextLine > lyricsSettings.rendering.lyrics.nextLineFadeInMilliseconds) {
         return 0;
     }
 
-    return Math.max(0, (1 - lineState.timeUntilNextLine / lyricsSettings.lyricsNextLineFadeInMs) * lyricsSettings.lyricsInactiveLineOpacity);
+    return Math.max(0, (1 - lineState.timeUntilNextLine / lyricsSettings.rendering.lyrics.nextLineFadeInMilliseconds) * lyricsSettings.rendering.lyrics.inactiveLineOpacity);
 };
 
 const renderingCoreGetLyricFont = (text) => {
     const fontStyle = /^\(.*\)$/.test(text) ? 'italic ' : '';
 
-    return `${fontStyle}${lyricsSettings.lyricsLineFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`;
+    return `${fontStyle}${lyricsSettings.rendering.lyrics.lyricFontSize}px ${lyricsSettings.rendering.lyrics.fontFamily}`;
 };
 
 const renderingCoreGetLoopingOverlayLineState = (textLines, currentTimeMilliseconds, renderOptions) => {
-    const currentTimeSeconds = currentTimeMilliseconds / lyricsSettings.lyricsMillisecondsPerSecond;
-    const lineDurationSeconds = renderOptions.lineDuration || lyricsSettings.lyricsOverlayLineDurationSeconds;
-    const fadeDurationSeconds = Math.min(renderOptions.fadeDuration || lyricsSettings.lyricsOverlayFadeDurationSeconds, lineDurationSeconds / 2);
+    const currentTimeSeconds = currentTimeMilliseconds / 1000;
+    const lineDurationSeconds = renderOptions.lineDuration || lyricsSettings.rendering.fade.overlayLineDurationSeconds;
+    const fadeDurationSeconds = Math.min(renderOptions.fadeDuration || lyricsSettings.rendering.fade.overlayFadeDurationSeconds, lineDurationSeconds / 2);
     const currentLineIndex = Math.floor(currentTimeSeconds / lineDurationSeconds) % textLines.length;
     const timeWithinCycle = currentTimeSeconds % lineDurationSeconds;
 
@@ -93,7 +93,7 @@ const renderingCoreGetLoopingOverlayLineState = (textLines, currentTimeMilliseco
     };
 };
 
-const renderingCoreColorForLine = (lineIndex) => (lineIndex % 2 === 0 ? lyricsSettings.lyricsKeyColor : lyricsSettings.lyricsNonActiveTextColor);
+const renderingCoreColorForLine = (lineIndex) => (lineIndex % 2 === 0 ? lyricsSettings.colors.key : lyricsSettings.colors.text);
 
 const renderingCoreGetOverlayTextareaLines = (selector) => {
     const element = document.querySelector(selector);
@@ -116,40 +116,40 @@ const renderingCoreRenderOverlayTextLines = (drawContext, lines, adjustedRenderT
 };
 
 export const lyricsRenderingCoreRender = (currentTimeMilliseconds, drawContext, renderOptions = {}) => {
-    const audioPlayerElement = document.querySelector(lyricsSettings.elementSelectorAudio);
+    const audioPlayerElement = document.querySelector(lyricsSettings.selectors.elementAudio);
     const adjustedRenderTime = lyricsRenderingCoreGetAdjustedRenderTime(currentTimeMilliseconds);
     const lineState = lyricsRenderingCoreGetRenderLineState(adjustedRenderTime, audioPlayerElement);
 
     if (!renderOptions.isOfflineExport) {
         lyricsRenderingEffectsEnsureBackgroundVideoPlaying();
     }
-    lyricsRenderingEffectsUpdateBackgroundOpacity(lineState);
+    lyricsRenderingEffectsUpdateBackgroundOpacity(lineState, renderOptions.snapBackgroundFade);
 
-    drawContext.clearRect(0, 0, lyricsSettings.lyricsPreviewWidth, lyricsSettings.lyricsPreviewHeight);
-    if (lyricsSettings.lyricsStateIsRecordingIntro && lyricsSettings.lyricsRecordingIntroType === 'video') {
+    drawContext.clearRect(0, 0, lyricsSettings.canvas.width, lyricsSettings.canvas.height);
+    if (lyricsSettings.state.isRecordingIntro && lyricsSettings.state.recordingIntroType === 'video') {
         return;
     }
 
-    if (lyricsSettings.lyricsStateIsRecordingIntro && lyricsSettings.lyricsRecordingIntroType === 'audio') {
+    if (lyricsSettings.state.isRecordingIntro && lyricsSettings.state.recordingIntroType === 'audio') {
         lyricsRenderingEffectsRenderBackgroundIntro(drawContext);
         return;
     }
 
     lyricsRenderingEffectsRenderBackground(drawContext);
-    if (lyricsSettings.lyricsStateIsRecordingIntro) {
+    if (lyricsSettings.state.isRecordingIntro) {
         return;
     }
 
     lyricsRenderingCoreRenderOverlayText(drawContext, adjustedRenderTime);
     lyricsRenderingCoreRenderLyricsLines(drawContext, lineState, adjustedRenderTime);
-    lyricsRenderingEffectsRenderSpectrumLayer(drawContext, renderOptions.frequencyData, renderOptions.isOfflineExport);
+    lyricsRenderingEffectsRenderSpectrumLayer(drawContext, renderOptions.frequencyData, renderOptions.isOfflineExport, currentTimeMilliseconds);
 };
 
 export const lyricsRenderingCoreGetRenderLineState = (adjustedRenderTime, audioElement) => {
-    const totalLines = lyricsSettings.lyricsDataParsed.length;
+    const totalLines = lyricsSettings.state.parsedLyrics.length;
     const activeLineIndex = renderingCoreFindActiveLineIndex(adjustedRenderTime);
-    const currentLineStart = (totalLines > 0 && activeLineIndex >= 0) ? lyricsSettings.lyricsDataParsed[activeLineIndex].timeMs : 0;
-    const currentLineEnd = (activeLineIndex + 1 < totalLines && activeLineIndex >= 0) ? lyricsSettings.lyricsDataParsed[activeLineIndex + 1].timeMs : audioElement.duration * lyricsSettings.lyricsMillisecondsPerSecond;
+    const currentLineStart = (totalLines > 0 && activeLineIndex >= 0) ? lyricsSettings.state.parsedLyrics[activeLineIndex].timeMs : 0;
+    const currentLineEnd = (activeLineIndex + 1 < totalLines && activeLineIndex >= 0) ? lyricsSettings.state.parsedLyrics[activeLineIndex + 1].timeMs : audioElement.duration * 1000;
     const timeUntilNextLine = currentLineEnd - adjustedRenderTime;
     const lineTexts = renderingCoreGetLineTexts(activeLineIndex, totalLines);
     const isEnding = activeLineIndex >= totalLines - 2 && lineTexts.textActiveRaw.trim() === '' && lineTexts.textNextRaw.trim() === '';
@@ -168,7 +168,7 @@ export const lyricsRenderingCoreGetRenderLineState = (adjustedRenderTime, audioE
 const renderingCoreGetTripleShiftDuration = (lineState) => {
     const lineDuration = Math.max(1, lineState.currentLineEnd - lineState.currentLineStart);
     return Math.min(
-        lyricsSettings.lyricsTripleShiftDurationMs,
+        lyricsSettings.rendering.lyrics.tripleShiftDurationMilliseconds,
         Math.max(200, Math.round(lineDuration * 0.55))
     );
 };
@@ -190,15 +190,15 @@ const renderingCoreGetTriplePrevNextAlpha = (lineState, adjustedRenderTime) => {
     const eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
 
     return {
-        prevAlpha: (1 - eased) * lyricsSettings.lyricsInactiveLineOpacity,
-        nextAlpha: eased * lyricsSettings.lyricsInactiveLineOpacity,
+        prevAlpha: (1 - eased) * lyricsSettings.rendering.lyrics.inactiveLineOpacity,
+        nextAlpha: eased * lyricsSettings.rendering.lyrics.inactiveLineOpacity,
     };
 };
 
 // During an instrumental line the whole triple block fades out; when the next
 // regular line starts it fades back in.
 const renderingCoreGetTripleVisibility = (lineState, adjustedRenderTime) => {
-    const fadeDuration = lyricsSettings.lyricsTripleFadeDurationMs;
+    const fadeDuration = lyricsSettings.rendering.lyrics.tripleFadeDurationMilliseconds;
     const elapsed = adjustedRenderTime - lineState.currentLineStart;
     if (lineState.isCurrentInstrumental) {
         return Math.max(0, 1 - elapsed / fadeDuration);
@@ -215,17 +215,17 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
     }
 
     const animationProgress = renderingCoreGetAnimationProgress(lineState, adjustedRenderTime);
-    const lineSpacing = lyricsSettings.lyricsLineSpacing;
-    const centerX = lyricsSettings.lyricsPreviewWidth / 2;
+    const lineSpacing = lyricsSettings.rendering.lyrics.lineSpacing;
+    const centerX = lyricsSettings.canvas.width / 2;
 
     drawContext.textAlign = 'center';
     drawContext.textBaseline = 'middle';
 
-    if (lyricsSettings.lyricsDisplayVersion === 'triple') {
+    if (lyricsSettings.display.version === 'triple') {
         // Active line is always at height/2 (truly centered), independent of baseYRatio.
         // At the start of a new line the block is offset by lineSpacing (lines are one
         // spacing lower) and eases up to zero over lyricsTripleShiftDurationMs.
-        const centerY = lyricsSettings.lyricsPreviewHeight / 2;
+        const centerY = lyricsSettings.canvas.height / 2;
         const shiftFactor = renderingCoreGetTripleShiftOffset(lineState, adjustedRenderTime);
         const shiftOffset = (1 - shiftFactor) * lineSpacing;
         const visibility = renderingCoreGetTripleVisibility(lineState, adjustedRenderTime);
@@ -238,7 +238,7 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
             text: lineState.textPrevious,
             x: centerX,
             y: centerY - lineSpacing + shiftOffset,
-            color: lyricsSettings.lyricsNonActiveTextColor,
+            color: lyricsSettings.colors.text,
             alpha: prevAlpha * visibility,
         });
 
@@ -247,7 +247,7 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
             text: lineState.textActive,
             x: centerX,
             y: centerY + shiftOffset,
-            color: lyricsSettings.lyricsKeyColor,
+            color: lyricsSettings.colors.key,
             alpha: visibility,
         });
 
@@ -256,7 +256,7 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
             text: lineState.textNext,
             x: centerX,
             y: centerY + lineSpacing + shiftOffset,
-            color: lyricsSettings.lyricsNonActiveTextColor,
+            color: lyricsSettings.colors.text,
             alpha: nextAlpha * visibility,
         });
 
@@ -264,14 +264,14 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
     }
 
     // Dual mode (default)
-    const yBase = lyricsSettings.lyricsPreviewHeight * lyricsSettings.lyricsLineBaseYRatio;
+    const yBase = lyricsSettings.canvas.height * lyricsSettings.rendering.lyrics.defaultBaseYRatio;
     const scroll = animationProgress * lineSpacing;
 
     lyricsRenderingCoreRenderTextLine(drawContext, {
         text: lineState.textPrevious,
         x: centerX,
         y: yBase - lineSpacing - scroll,
-        color: lyricsSettings.lyricsNonActiveTextColor,
+        color: lyricsSettings.colors.text,
         alpha: renderingCoreGetPreviousLineAlpha(lineState, adjustedRenderTime, animationProgress),
     });
 
@@ -279,14 +279,14 @@ export const lyricsRenderingCoreRenderLyricsLines = (drawContext, lineState, adj
         text: lineState.textActive,
         x: centerX,
         y: yBase - scroll,
-        color: lyricsSettings.lyricsKeyColor,
+        color: lyricsSettings.colors.key,
     });
 
     lyricsRenderingCoreRenderTextLine(drawContext, {
         text: lineState.textNext,
         x: centerX,
         y: yBase + lineSpacing - scroll,
-        color: lyricsSettings.lyricsNonActiveTextColor,
+        color: lyricsSettings.colors.text,
         alpha: renderingCoreGetNextLineAlpha(lineState),
     });
 };
@@ -314,68 +314,84 @@ export const lyricsRenderingCoreRenderHeaderFooter = (drawContext, textLines, cu
     drawContext.textBaseline = renderOptions.baseline;
 
     const baseAlpha = Math.max(0, Math.min(1, renderOptions.baseAlpha ?? 1));
-    const maxOpacity = lyricsSettings.lyricsOverlayMaxOpacity;
-
-    if (textLines.length === 1) {
-        drawContext.save();
-        drawContext.globalAlpha = maxOpacity * baseAlpha;
-        drawContext.fillStyle = lyricsSettings.lyricsNonActiveTextColor;
-        drawContext.fillText(textLines[0], renderOptions.x, renderOptions.y);
-        drawContext.restore();
-
-        return;
-    }
-
-    const { lineIndex, alpha } = renderingCoreGetLoopingOverlayLineState(textLines, currentTimeMilliseconds, renderOptions);
+    const maxOpacity = lyricsSettings.rendering.fade.overlayMaximumOpacity;
+    const lineState = textLines.length === 1
+        ? { lineIndex: 0, alpha: 1, color: lyricsSettings.colors.text }
+        : renderingCoreGetLoopingOverlayLineState(textLines, currentTimeMilliseconds, renderOptions);
+    const lineText = textLines[lineState.lineIndex];
 
     drawContext.save();
-    drawContext.globalAlpha = alpha * maxOpacity * baseAlpha;
-    drawContext.fillStyle = renderingCoreColorForLine(lineIndex);
-    drawContext.fillText(textLines[lineIndex], renderOptions.x, renderOptions.y);
+    drawContext.globalAlpha = lineState.alpha * maxOpacity * baseAlpha;
+
+    const textSegments = lineText.split(/(SyncMusics)/g);
+    if (textSegments.length === 1) {
+        drawContext.fillStyle = lineState.color || renderingCoreColorForLine(lineState.lineIndex);
+        drawContext.fillText(lineText, renderOptions.x, renderOptions.y);
+    } else {
+        drawContext.textAlign = 'left';
+        let segmentX = renderOptions.x - drawContext.measureText(lineText).width / 2;
+        const textColor = lineState.color || renderingCoreColorForLine(lineState.lineIndex);
+
+        for (const segment of textSegments) {
+            if (segment === 'SyncMusics') {
+                drawContext.fillStyle = lyricsSettings.colors.key;
+                drawContext.fillText('Sync', segmentX, renderOptions.y);
+                segmentX += drawContext.measureText('Sync').width;
+                drawContext.fillStyle = textColor;
+                drawContext.fillText('Musics', segmentX, renderOptions.y);
+                segmentX += drawContext.measureText('Musics').width;
+            } else if (segment) {
+                drawContext.fillStyle = textColor;
+                drawContext.fillText(segment, segmentX, renderOptions.y);
+                segmentX += drawContext.measureText(segment).width;
+            }
+        }
+    }
+
     drawContext.restore();
 };
 
 export const lyricsRenderingCoreRenderOverlayText = (drawContext, adjustedRenderTime) => {
     // Determine if the current line is instrumental (contains the instrumental symbol).
     const activeLineIdx = renderingCoreFindActiveLineIndex(adjustedRenderTime);
-    const currentLine = activeLineIdx >= 0 ? lyricsSettings.lyricsDataParsed[activeLineIdx] : null;
-    const isInstrumental = currentLine && currentLine.text && currentLine.text.includes(lyricsSettings.lyricsInstrumentalSymbol);
+    const currentLine = activeLineIdx >= 0 ? lyricsSettings.state.parsedLyrics[activeLineIdx] : null;
+    const isInstrumental = currentLine && currentLine.text && currentLine.text.includes(lyricsSettings.rendering.lyrics.instrumentalSymbol);
 
     // Desired target opacity: 0 for instrumental, otherwise based on background opacity ratio.
-    const backgroundRatio = Math.max(0, Math.min(1, lyricsSettings.lyricsBackgroundCurrentOpacity / lyricsSettings.lyricsOverlayOpacityReference));
+    const backgroundRatio = Math.max(0, Math.min(1, lyricsSettings.state.backgroundOpacity / lyricsSettings.rendering.fade.overlayOpacityReference));
     const targetOpacity = isInstrumental ? 0 : backgroundRatio;
 
     // Apply fade logic (respect recording transition pending flag).
-    if (lyricsSettings.lyricsStateIsRecording && lyricsSettings.lyricsRecordingMainTransitionPending) {
-        lyricsSettings.lyricsOverlayCurrentOpacity = targetOpacity;
-    } else if (lyricsSettings.lyricsOverlayCurrentOpacity < targetOpacity) {
-        lyricsSettings.lyricsOverlayCurrentOpacity = Math.min(targetOpacity, lyricsSettings.lyricsOverlayCurrentOpacity + lyricsSettings.lyricsFadeSpeed);
-    } else if (lyricsSettings.lyricsOverlayCurrentOpacity > targetOpacity) {
-        lyricsSettings.lyricsOverlayCurrentOpacity = Math.max(targetOpacity, lyricsSettings.lyricsOverlayCurrentOpacity - lyricsSettings.lyricsFadeSpeed);
+    if (lyricsSettings.state.isRecording && lyricsSettings.state.recordingMainTransitionPending) {
+        lyricsSettings.state.overlayOpacity = targetOpacity;
+    } else if (lyricsSettings.state.overlayOpacity < targetOpacity) {
+        lyricsSettings.state.overlayOpacity = Math.min(targetOpacity, lyricsSettings.state.overlayOpacity + lyricsSettings.rendering.fade.speedPerFrame);
+    } else if (lyricsSettings.state.overlayOpacity > targetOpacity) {
+        lyricsSettings.state.overlayOpacity = Math.max(targetOpacity, lyricsSettings.state.overlayOpacity - lyricsSettings.rendering.fade.speedPerFrame);
     }
 
-    const overlayAlpha = lyricsSettings.lyricsOverlayCurrentOpacity;
+    const overlayAlpha = lyricsSettings.state.overlayOpacity;
 
-    renderingCoreRenderOverlayTextLines(drawContext, renderingCoreGetOverlayTextareaLines(lyricsSettings.elementSelectorTextareaHeader), adjustedRenderTime, {
-        font: `${lyricsSettings.lyricsOverlayHeaderFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`,
-        x: lyricsSettings.lyricsPreviewWidth / 2,
-        y: lyricsSettings.lyricsOverlayHeaderY,
+    renderingCoreRenderOverlayTextLines(drawContext, renderingCoreGetOverlayTextareaLines(lyricsSettings.selectors.elementTextarea.header), adjustedRenderTime, {
+        font: `${lyricsSettings.rendering.overlay.header.fontSize}px ${lyricsSettings.rendering.lyrics.fontFamily}`,
+        x: lyricsSettings.canvas.width / 2,
+        y: lyricsSettings.rendering.overlay.header.topY,
         baseline: 'top',
         baseAlpha: overlayAlpha,
     });
 
-    renderingCoreRenderOverlayTextLines(drawContext, renderingCoreGetOverlayTextareaLines(lyricsSettings.elementSelectorTextareaFooter), adjustedRenderTime, {
-        font: `${lyricsSettings.lyricsOverlayFooterFontSize}px "${lyricsSettings.lyricsFontFace}", sans-serif`,
-        x: lyricsSettings.lyricsPreviewWidth / 2,
-        y: lyricsSettings.lyricsPreviewHeight - lyricsSettings.lyricsOverlayFooterBottomOffset,
+    renderingCoreRenderOverlayTextLines(drawContext, renderingCoreGetOverlayTextareaLines(lyricsSettings.selectors.elementTextarea.footer), adjustedRenderTime, {
+        font: `${lyricsSettings.rendering.overlay.footer.fontSize}px ${lyricsSettings.rendering.lyrics.fontFamily}`,
+        x: lyricsSettings.canvas.width / 2,
+        y: lyricsSettings.canvas.height - lyricsSettings.rendering.overlay.footer.bottomOffset,
         baseline: 'bottom',
         baseAlpha: overlayAlpha,
     });
 };
 
 export const lyricsRenderingCoreGetAdjustedRenderTime = (currentTimeMilliseconds) => {
-    const offsetInputElement = document.querySelector(lyricsSettings.elementSelectorInputOffset);
-    const timeOffsetMilliseconds = (parseFloat(offsetInputElement?.value) || 0) * lyricsSettings.lyricsMillisecondsPerSecond;
+    const offsetInputElement = document.querySelector(lyricsSettings.selectors.elementInput.offset);
+    const timeOffsetMilliseconds = (parseFloat(offsetInputElement?.value) || 0) * 1000;
 
     return currentTimeMilliseconds + timeOffsetMilliseconds;
 };

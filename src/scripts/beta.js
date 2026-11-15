@@ -1,34 +1,46 @@
 import { Mp4Muxer } from './modules/v1/lyricsMp4Muxer';
-import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings';
+import { lyricsSettings } from './modules/v1/lyricsSettings';
 
 (() => {
     'use strict';
 
     const {
-        storageKeys: STORAGE_KEYS,
-        persistenceKeys: PERSISTENCE_KEYS,
-        database: DATABASE,
+        storage: {
+            keys: STORAGE_KEYS,
+            database: DATABASE,
+        },
         selectors: SELECTORS,
-        design: { width: DESIGN_DEFAULT_WIDTH, height: DESIGN_DEFAULT_HEIGHT },
-        videoExport: VIDEO_EXPORT,
-        audioExport: AUDIO_EXPORT,
-        muxerExport: MUXER_EXPORT,
-        exportTiming: EXPORT_TIMING,
-        blobChunkSize: BLOB_CHUNK_SIZE,
-        filePicker: FILE_PICKER,
-        wakeLockType: WAKE_LOCK_TYPE,
-        exportUi: EXPORT_UI,
+        canvas: { width: DESIGN_DEFAULT_WIDTH, height: DESIGN_DEFAULT_HEIGHT },
+        mp4Export: {
+            video: VIDEO_EXPORT,
+            audio: AUDIO_EXPORT,
+            muxer: MUXER_EXPORT,
+            timing: EXPORT_TIMING,
+            blobChunkSize: BLOB_CHUNK_SIZE,
+            filePicker: FILE_PICKER,
+            wakeLockType: WAKE_LOCK_TYPE,
+        },
+        messages: {
+            missingAudio: MISSING_AUDIO,
+            media: MEDIA_MESSAGES,
+            mp4Export: EXPORT_UI,
+            templates: TEMPLATE_MESSAGES,
+        },
         spectrum: SPECTRUM,
-        lyricsStyle: LYRICS_STYLE,
-        fadeStyle: FADE_STYLE,
+        rendering: {
+            lyrics: LYRICS_STYLE,
+            fade: FADE_STYLE,
+        },
         preview: {
             defaultLevelIndex: PREVIEW_DEFAULT_LEVEL_INDEX,
             defaultWidthLevels: PREVIEW_DEFAULT_WIDTH_LEVELS,
             slowFrameCostMilliseconds: PREVIEW_SLOW_FRAME_COST_MILLISECONDS,
             slowFramesBeforeDowngrade: PREVIEW_SLOW_FRAMES_BEFORE_DOWNGRADE,
         },
-        defaultColors: DEFAULT_COLORS,
-    } = lyricsBetaSettings;
+        colors: { default: DEFAULT_COLORS },
+    } = lyricsSettings;
+
+    const PERSISTENCE_KEYS = lyricsSettings.storage.persistenceKeys;
 
     // STATE APLIKASI
     const appState = {
@@ -38,12 +50,11 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         isSpectrumEnabled: true,
         backgroundResource: null, // { type: "image" | "video", element }
         animationFrameId: null,
-        exportFileName: lyricsSettings.lyricsExportFileName,
-        backgroundColor: lyricsSettings.lyricsBgColor,
-        keyColor: lyricsSettings.lyricsKeyColor,
-        textColor: lyricsSettings.lyricsNonActiveTextColor,
-        displayMode: lyricsSettings.lyricsDisplayVersion,
-        lineBaseYRatio: lyricsSettings.lyricsLineBaseYRatio,
+        backgroundColor: lyricsSettings.colors.background,
+        keyColor: lyricsSettings.colors.key,
+        textColor: lyricsSettings.colors.text,
+        displayMode: lyricsSettings.display.version,
+        lineBaseYRatio: lyricsSettings.rendering.lyrics.defaultBaseYRatio,
     };
 
     const liveAudio = {
@@ -399,13 +410,36 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         context.textAlign = 'center';
         context.fillStyle = lineColor;
         context.globalAlpha = lineOpacity * FADE_STYLE.overlayMaximumOpacity * clampBetweenZeroAndOne(baseOpacity);
-        if (baseline === 'top') {
-            context.textBaseline = 'top';
-            wrappedLines.forEach((wrappedLine, index) => context.fillText(wrappedLine, DESIGN_DEFAULT_WIDTH / 2, anchorY + index * lineHeight));
-        } else {
-            context.textBaseline = 'bottom';
-            wrappedLines.forEach((wrappedLine, index) => context.fillText(wrappedLine, DESIGN_DEFAULT_WIDTH / 2, anchorY - (wrappedLines.length - 1 - index) * lineHeight));
-        }
+        context.textBaseline = baseline === 'top' ? 'top' : 'bottom';
+        wrappedLines.forEach((wrappedLine, index) => {
+            const lineY = baseline === 'top'
+                ? anchorY + index * lineHeight
+                : anchorY - (wrappedLines.length - 1 - index) * lineHeight;
+            const segments = wrappedLine.split(/(SyncMusics)/g);
+            if (segments.length === 1) {
+                context.textAlign = 'center';
+                context.fillStyle = lineColor;
+                context.fillText(wrappedLine, DESIGN_DEFAULT_WIDTH / 2, lineY);
+                return;
+            }
+
+            context.textAlign = 'left';
+            let segmentX = DESIGN_DEFAULT_WIDTH / 2 - context.measureText(wrappedLine).width / 2;
+            for (const segment of segments) {
+                if (segment === 'SyncMusics') {
+                    context.fillStyle = appState.keyColor;
+                    context.fillText('Sync', segmentX, lineY);
+                    segmentX += context.measureText('Sync').width;
+                    context.fillStyle = lineColor;
+                    context.fillText('Musics', segmentX, lineY);
+                    segmentX += context.measureText('Musics').width;
+                } else if (segment) {
+                    context.fillStyle = lineColor;
+                    context.fillText(segment, segmentX, lineY);
+                    segmentX += context.measureText(segment).width;
+                }
+            }
+        });
         context.restore();
     }
 
@@ -448,7 +482,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
 
     // Menggambar satu frame lengkap.
     function drawFrame(context, timeMilliseconds, fadeState, frameOptions) {
-        const adjustedTimeMilliseconds = timeMilliseconds + frameOptions.offsetSeconds * lyricsSettings.lyricsMillisecondsPerSecond;
+        const adjustedTimeMilliseconds = timeMilliseconds + frameOptions.offsetSeconds * 1000;
         context.clearRect(0, 0, DESIGN_DEFAULT_WIDTH, DESIGN_DEFAULT_HEIGHT);
 
         if (frameOptions.isIntroAudioPlaying) {
@@ -499,14 +533,14 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         fadeState.overlayOpacity = moveTowardsTarget(fadeState.overlayOpacity, overlayTargetOpacity, fadeStep);
 
         drawOverlayText(context, frameOptions.headerLines, adjustedTimeMilliseconds, {
-            fontSize: LYRICS_STYLE.headerFontSize,
-            anchorY: LYRICS_STYLE.headerTopY,
+            fontSize: lyricsSettings.rendering.overlay.header.fontSize,
+            anchorY: lyricsSettings.rendering.overlay.header.topY,
             baseline: 'top',
             baseOpacity: fadeState.overlayOpacity,
         });
         drawOverlayText(context, frameOptions.footerLines, adjustedTimeMilliseconds, {
-            fontSize: LYRICS_STYLE.footerFontSize,
-            anchorY: DESIGN_DEFAULT_HEIGHT - LYRICS_STYLE.footerBottomOffset,
+            fontSize: lyricsSettings.rendering.overlay.footer.fontSize,
+            anchorY: DESIGN_DEFAULT_HEIGHT - lyricsSettings.rendering.overlay.footer.bottomOffset,
             baseline: 'bottom',
             baseOpacity: fadeState.overlayOpacity,
         });
@@ -627,15 +661,15 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
     }
 
     function showAnalysisProgressOnExportButton(progressRatio, hasFailed) {
-        const exportButton = document.querySelector(SELECTORS.exportButton);
+        const exportButton = document.querySelector(SELECTORS.elementButton.export);
         if (!exportButton || appState.isExporting) return;
         if (progressRatio === null) {
             setExportButtonState(exportButton, false);
-            if (hasFailed) exportButton.textContent = EXPORT_UI.analysisButtonFailure;
+            if (hasFailed) exportButton.textContent = 'FAILURE ANALYSIS';
             return;
         }
         exportButton.disabled = true;
-        exportButton.textContent = `${EXPORT_UI.analysisButtonProgress} ${Math.round(progressRatio * 100)}%`;
+        exportButton.textContent = `ANALYSIS ${Math.round(progressRatio * 100)}%`;
     }
 
     function analyzeAudioBlob(audioBlob) {
@@ -674,7 +708,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 };
                 worker.onerror = (errorEvent) => {
                     worker.terminate();
-                    reject(new Error(errorEvent.message || 'Worker analisis spektrum gagal'));
+                    reject(new Error(errorEvent.message || EXPORT_UI.workerAnalysisError));
                 };
                 worker.postMessage(
                     {
@@ -701,7 +735,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             showAnalysisProgressOnExportButton(null);
             requestRedraw();
         })().catch((error) => {
-            console.error('Analisis spektrum gagal:', error);
+            console.error(EXPORT_UI.workerAnalysisFailed, error);
             if (analysisToken === spectrumAnalysis.token) showAnalysisProgressOnExportButton(null, true);
             throw error;
         });
@@ -790,15 +824,15 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         context.setTransform(scale, 0, 0, scale, 0, 0);
         drawFrame(context, audioElement.currentTime * 1000, STATE_PREVIEW.fadeState, {
             durationMilliseconds: (audioElement.duration || 0) * 1000,
-            offsetSeconds: parseFloat(document.querySelector(SELECTORS.offsetInput)?.value) || 0,
+            offsetSeconds: parseFloat(document.querySelector(SELECTORS.elementInput.offset)?.value) || 0,
             frequencyData,
             mouseState: STATE_PREVIEW.mouse,
             snapFades: !isPlaying,
             deltaSeconds,
             backgroundResource: appState.backgroundResource,
             isIntroAudioPlaying: false,
-            headerLines: getTextareaLines(SELECTORS.headerTextarea),
-            footerLines: getTextareaLines(SELECTORS.footerTextarea),
+            headerLines: getTextareaLines(SELECTORS.elementTextarea.header),
+            footerLines: getTextareaLines(SELECTORS.elementTextarea.footer),
             isSpectrumEnabled: appState.isSpectrumEnabled,
         });
         context.setTransform(1, 0, 0, 1, 0, 0);
@@ -835,7 +869,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             return;
         }
         const nowTimestamp = performance.now();
-        const minimumFrameInterval = lyricsSettings.lyricsMillisecondsPerSecond / VIDEO_EXPORT.framesPerSecond - 2;
+        const minimumFrameInterval = 1000 / VIDEO_EXPORT.framesPerSecond - 2;
         if (nowTimestamp - STATE_PREVIEW.lastLoopTimestamp >= minimumFrameInterval) {
             STATE_PREVIEW.lastLoopTimestamp = nowTimestamp;
             renderPreviewFrame(true);
@@ -864,11 +898,11 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
 
     // EXPORT ENGINE  (WebCodecs: GPU dulu, otomatis fallback ke CPU)
     const exportUi = {
-        overlay: () => document.querySelector(SELECTORS.exportOverlay),
-        title: () => document.querySelector(SELECTORS.exportTitle),
-        status: () => document.querySelector(SELECTORS.exportStatus),
-        progressBar: () => document.querySelector(SELECTORS.exportProgressBar),
-        cancelButton: () => document.querySelector(SELECTORS.exportCancelButton),
+        overlay: () => document.querySelector(SELECTORS.mp4Export.overlay),
+        title: () => document.querySelector(SELECTORS.mp4Export.title),
+        status: () => document.querySelector(SELECTORS.mp4Export.status),
+        progressBar: () => document.querySelector(SELECTORS.mp4Export.progressBar),
+        cancelButton: () => document.querySelector(SELECTORS.mp4Export.cancelButton),
     };
 
     function updateExportUi(statusText, progressRatio) {
@@ -999,7 +1033,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                     sampleRate,
                     numberOfFrames: framesInChunk,
                     numberOfChannels: AUDIO_EXPORT.numberOfChannels,
-                    timestamp: Math.round((startSample * EXPORT_TIMING.microsecondsPerSecond) / sampleRate),
+                    timestamp: Math.round((startSample * 1_000_000) / sampleRate),
                     data: planarSamples,
                 });
                 try {
@@ -1087,14 +1121,14 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         linkElement.href = objectUrl;
         linkElement.download = fileName;
         linkElement.click();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), lyricsSettings.lyricsRecordingObjectUrlRevokeDelayMs);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), lyricsSettings.recording.objectUrlRevokeDelayMilliseconds);
     }
 
     // Render satu file dengan satu kandidat encoder
     async function renderVideoFile(exportInputs, videoCandidate) {
         const { width, height, framesPerSecond } = VIDEO_EXPORT;
         const sampleRate = AUDIO_EXPORT.sampleRate;
-        const outputFileName = `${appState.exportFileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`;
+        const outputFileName = `${lyricsSettings.export.fileName}_${VIDEO_EXPORT.outputFileSuffix}.${VIDEO_EXPORT.fileExtension}`;
         const encoderDescription = `${videoCandidate.label} + ${exportInputs.muxerAudioCodec.toUpperCase()}`;
         const opusWarning = exportInputs.muxerAudioCodec === 'opus' ? EXPORT_UI.opusWarning : '';
         const canvas = new OffscreenCanvas(width, height);
@@ -1132,7 +1166,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
 
         const fadeState = { backgroundOpacity: 0, overlayOpacity: 0 };
 
-        const mainDurationMilliseconds = (exportInputs.mainLeftChannel.length / sampleRate) * lyricsSettings.lyricsMillisecondsPerSecond;
+        const mainDurationMilliseconds = (exportInputs.mainLeftChannel.length / sampleRate) * 1000;
         const introSampleCount = Math.round(exportInputs.introDurationSeconds * sampleRate);
         const totalSampleCount = introSampleCount + exportInputs.mainLeftChannel.length;
         const totalFrames = Math.ceil((totalSampleCount / sampleRate) * framesPerSecond);
@@ -1141,6 +1175,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         let introVideoElement = null;
         let lastBackgroundSeekSeconds = -1;
         let lastIntroSeekSeconds = -1;
+        let hasRenderedMainFrame = false;
         let nextAudioChunkIndex = 0;
         let isFinished = false;
 
@@ -1201,6 +1236,10 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 } else {
                     /* --- Konten utama --- */
                     const mainSeconds = timelineSeconds - exportInputs.introDurationSeconds;
+                    if (!hasRenderedMainFrame) {
+                        fadeState.backgroundOpacity = FADE_STYLE.backgroundMaximumOpacity;
+                        hasRenderedMainFrame = true;
+                    }
                     let backgroundResource = exportInputs.staticBackground;
                     if (backgroundVideoElement) {
                         const videoDuration = backgroundVideoElement.duration || EXPORT_TIMING.backgroundVideoDurationFallbackSeconds;
@@ -1213,7 +1252,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                         backgroundResource = { type: 'video', element: backgroundVideoElement };
                     }
                     const frequencyData = exportInputs.isSpectrumEnabled ? exportInputs.getFrequencyFrame(mainSeconds) : STATE_PREVIEW.silentFrequencyData;
-                    drawFrame(context, mainSeconds * lyricsSettings.lyricsMillisecondsPerSecond, fadeState, {
+                    drawFrame(context, mainSeconds * 1000, fadeState, {
                         ...baseFrameOptions,
                         backgroundResource,
                         frequencyData,
@@ -1222,8 +1261,8 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 }
 
                 const videoFrame = new VideoFrame(canvas, {
-                    timestamp: Math.round((frameIndex * EXPORT_TIMING.microsecondsPerSecond) / framesPerSecond),
-                    duration: Math.round(EXPORT_TIMING.microsecondsPerSecond / framesPerSecond),
+                    timestamp: Math.round((frameIndex * 1_000_000) / framesPerSecond),
+                    duration: Math.round(1_000_000 / framesPerSecond),
                 });
                 try {
                     videoEncoder.encode(videoFrame, { keyFrame: frameIndex % VIDEO_EXPORT.keyFrameIntervalInFrames === 0 });
@@ -1231,7 +1270,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                     videoFrame.close();
                 }
 
-                muxAudioChunksUpTo((timelineSeconds + EXPORT_TIMING.audioInterleaveLookaheadSeconds) * EXPORT_TIMING.microsecondsPerSecond);
+                muxAudioChunksUpTo((timelineSeconds + EXPORT_TIMING.audioInterleaveLookaheadSeconds) * 1_000_000);
 
                 /* Backpressure: jangan menumpuk frame yang menunggu encoder */
                 while (videoEncoder.encodeQueueSize > VIDEO_EXPORT.maximumPendingFrames) {
@@ -1242,18 +1281,13 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 if (frameIndex % EXPORT_TIMING.yieldFrameInterval === 0) await yieldToBrowser();
 
                 if (frameIndex % EXPORT_TIMING.statusFrameInterval === 0) {
-                    const elapsedSeconds = Math.max(EXPORT_TIMING.minimumElapsedSeconds, (performance.now() - renderStartTimestamp) / lyricsSettings.lyricsMillisecondsPerSecond);
+                    const elapsedSeconds = Math.max(EXPORT_TIMING.minimumElapsedSeconds, (performance.now() - renderStartTimestamp) / 1000);
                     const renderFramesPerSecond = (frameIndex + 1) / elapsedSeconds;
                     const remainingSeconds = (totalFrames - frameIndex) / renderFramesPerSecond;
                     const elapsed = `${Math.floor(elapsedSeconds / 60)}m ${Math.floor(elapsedSeconds % 60)}s`;
                     const remaining = `${Math.floor(remainingSeconds / 60)}m ${Math.floor(remainingSeconds % 60)}s`;
 
-                    const progressStatus = EXPORT_UI.progressStatus
-                        .replace('{frame}', frameIndex)
-                        .replace('{total}', totalFrames)
-                        .replace('{fps}', renderFramesPerSecond.toFixed(1))
-                        .replace('{elapsed}', elapsed)
-                        .replace('{remaining}', remaining);
+                    const progressStatus = `⏱ ${elapsed} ⏲ ${remaining} ᯓ ${renderFramesPerSecond.toFixed(1)} fps ⛶ ${frameIndex}/${totalFrames}`;
 
                     updateExportUi(`${encoderDescription}${opusWarning}\n${progressStatus}`, frameIndex / totalFrames);
                 }
@@ -1316,7 +1350,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             } catch (error) {
                 if (error === EXPORT_CANCELLED) throw error;
                 lastError = error;
-                console.warn(`Encoder "${videoCandidate.label}" failed:`, error);
+                console.warn(EXPORT_UI.encoderFailed.replace('{encoder}', videoCandidate.label), error);
                 if (candidateIndex < videoCandidates.length - 1) {
                     const fallbackStatus = EXPORT_UI.encoderFallback
                         .replace('{encoder}', videoCandidate.label)
@@ -1343,16 +1377,16 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             backgroundUrl: null,
             isBackgroundVideo: false,
             staticBackground: null,
-            offsetSeconds: parseFloat(document.querySelector(SELECTORS.offsetInput)?.value) || 0,
-            headerLines: getTextareaLines(SELECTORS.headerTextarea),
-            footerLines: getTextareaLines(SELECTORS.footerTextarea),
+            offsetSeconds: parseFloat(document.querySelector(SELECTORS.elementInput.offset)?.value) || 0,
+            headerLines: getTextareaLines(SELECTORS.elementTextarea.header),
+            footerLines: getTextareaLines(SELECTORS.elementTextarea.footer),
             isSpectrumEnabled: appState.isSpectrumEnabled,
             getFrequencyFrame,
             audioChunks: [],
             muxerAudioCodec: AUDIO_EXPORT.defaultMuxerCodec,
         };
 
-        const introFile = document.querySelector(SELECTORS.introFileInput)?.files?.[0];
+        const introFile = document.querySelector(SELECTORS.elementInput.intro)?.files?.[0];
         if (introFile) {
             exportInputs.isIntroVideo = introFile.type.startsWith('video/');
             exportInputs.introUrl = URL.createObjectURL(introFile);
@@ -1362,7 +1396,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 exportInputs.introRightChannel = decodedIntroBuffer.numberOfChannels > 1 ? decodedIntroBuffer.getChannelData(1) : null;
                 exportInputs.introDurationSeconds = decodedIntroBuffer.duration;
             } catch (error) {
-                console.warn('Intro tanpa audio atau gagal didecode:', error);
+                console.warn(EXPORT_UI.introAudioUnavailable, error);
             }
             if (exportInputs.isIntroVideo) {
                 const probeVideo = await loadVideoElement(exportInputs.introUrl);
@@ -1391,10 +1425,10 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
 
     const startExport = async () => {
         const audioElement = document.querySelector(SELECTORS.elementAudio);
-        const exportButton = document.querySelector(SELECTORS.exportButton);
+        const exportButton = document.querySelector(SELECTORS.elementButton.export);
 
         if (!audioElement.src) {
-            alert(EXPORT_UI.missingAudio);
+            alert(MISSING_AUDIO);
 
             return;
         }
@@ -1507,9 +1541,9 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
 
     function updateRemoveButtonsVisibility() {
         const audioElement = document.querySelector(SELECTORS.elementAudio);
-        document.querySelector(SELECTORS.removeAudioButton)?.classList.toggle('hidden', !audioElement.src);
-        document.querySelector(SELECTORS.removeBackgroundButton)?.classList.toggle('hidden', !appState.backgroundResource);
-        document.querySelector(SELECTORS.removeIntroButton)?.classList.toggle('hidden', !(document.querySelector(SELECTORS.introFileInput)?.files?.length > 0));
+        document.querySelector(SELECTORS.elementButton.removeAudio)?.classList.toggle('hidden', !audioElement.src);
+        document.querySelector(SELECTORS.elementButton.removeBackground)?.classList.toggle('hidden', !appState.backgroundResource);
+        document.querySelector(SELECTORS.elementButton.removeIntro)?.classList.toggle('hidden', !(document.querySelector(SELECTORS.elementInput.intro)?.files?.length > 0));
     }
 
     function loadBackgroundResource(objectUrl, mediaType, onLoaded) {
@@ -1572,7 +1606,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         if (!templates.length) {
             const emptyMessage = document.createElement('div');
             emptyMessage.className = 'border-border text-meta rounded-2xl border border-dashed p-8 text-center text-sm';
-            emptyMessage.textContent = 'No templates yet. Create your first template below.';
+            emptyMessage.textContent = TEMPLATE_MESSAGES.emptyState;
             listContainer.append(emptyMessage);
             return;
         }
@@ -1594,16 +1628,16 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             const actionsContainer = document.createElement('div');
             actionsContainer.className = 'flex shrink-0 gap-2';
 
-            const useButton = createTemplateButton('Use', 'bg-teal text-background hover:brightness-110');
+            const useButton = createTemplateButton(TEMPLATE_MESSAGES.useAction, 'bg-teal text-background hover:brightness-110');
             useButton.onclick = () => {
-                const targetTextarea = document.querySelector(templateType === 'header' ? SELECTORS.headerTextarea : SELECTORS.footerTextarea);
+                const targetTextarea = document.querySelector(templateType === 'header' ? SELECTORS.elementTextarea.header : SELECTORS.elementTextarea.footer);
                 targetTextarea.value = template.content;
-                writeStoredValue(templateType === 'header' ? STORAGE_KEYS.headerText : STORAGE_KEYS.footerText, template.content);
+                writeStoredValue(templateType === 'header' ? STORAGE_KEYS.lyricsHeader : STORAGE_KEYS.lyricsFooter, template.content);
                 requestRedraw();
                 dialogElement.close();
             };
 
-            const editButton = createTemplateButton('Edit', 'border-border border text-text');
+            const editButton = createTemplateButton(TEMPLATE_MESSAGES.editAction, 'border-border border text-text');
             editButton.onclick = () => {
                 const formElement = dialogElement.querySelector('.element_template_form');
                 formElement.elements.name.value = template.name;
@@ -1612,9 +1646,9 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
                 formElement.elements.name.focus();
             };
 
-            const deleteButton = createTemplateButton('Delete', 'text-red hover:bg-red/10');
+            const deleteButton = createTemplateButton(TEMPLATE_MESSAGES.deleteAction, 'text-red hover:bg-red/10');
             deleteButton.onclick = () => {
-                if (confirm(`Hapus template "${template.name}"?`)) {
+                if (confirm(TEMPLATE_MESSAGES.deleteConfirmation.replace('{name}', template.name))) {
                     templates.splice(templateIndex, 1);
                     saveTemplates(templateType, templates);
                     renderTemplateList(dialogElement, templateType);
@@ -1628,7 +1662,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
     }
 
     function setupTemplateDialogs() {
-        document.querySelectorAll(SELECTORS.templateDialogs).forEach((dialogElement) => {
+        document.querySelectorAll(SELECTORS.elementDialog.template).forEach((dialogElement) => {
             const templateType = dialogElement.dataset.templateType;
             const openButtonSelector = templateType === 'header' ? '.element_button_select_header' : '.element_button_select_footer';
 
@@ -1659,14 +1693,14 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
     // Event listener utama
     const setupEventListeners = () => {
         const audioElement = document.querySelector(SELECTORS.elementAudio);
-        const previewCanvas = document.querySelector(SELECTORS.elementPreviewCanvas);
-        const exportButton = document.querySelector(SELECTORS.exportButton);
+        const previewCanvas = document.querySelector(SELECTORS.elementCanvas.preview);
+        const exportButton = document.querySelector(SELECTORS.elementButton.export);
 
-        bindColorInput(SELECTORS.backgroundColorInput, STORAGE_KEYS.backgroundColor, 'backgroundColor');
-        bindColorInput(SELECTORS.keyColorInput, STORAGE_KEYS.keyColor, 'keyColor');
-        bindColorInput(SELECTORS.textColorInput, STORAGE_KEYS.textColor, 'textColor');
+        bindColorInput(SELECTORS.elementInput.backgroundColor, STORAGE_KEYS.colorBackground, 'backgroundColor');
+        bindColorInput(SELECTORS.elementInput.keyColor, STORAGE_KEYS.colorKey, 'keyColor');
+        bindColorInput(SELECTORS.elementInput.textColor, STORAGE_KEYS.colorText, 'textColor');
 
-        const lyricsTextarea = document.querySelector(SELECTORS.lyricsTextarea);
+        const lyricsTextarea = document.querySelector(SELECTORS.elementTextarea.lyrics);
         lyricsTextarea.addEventListener('input', () => {
             const normalizedText = normalizeLyricsText(lyricsTextarea.value);
             lyricsTextarea.value = normalizedText;
@@ -1675,40 +1709,40 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             writeStoredValue(STORAGE_KEYS.lyricsText, normalizedText);
         });
 
-        document.querySelector(SELECTORS.headerTextarea).addEventListener('input', (event) => {
-            writeStoredValue(STORAGE_KEYS.headerText, event.target.value);
+        document.querySelector(SELECTORS.elementTextarea.header).addEventListener('input', (event) => {
+            writeStoredValue(STORAGE_KEYS.lyricsHeader, event.target.value);
             requestRedraw();
         });
 
-        document.querySelector(SELECTORS.footerTextarea).addEventListener('input', (event) => {
-            writeStoredValue(STORAGE_KEYS.footerText, event.target.value);
+        document.querySelector(SELECTORS.elementTextarea.footer).addEventListener('input', (event) => {
+            writeStoredValue(STORAGE_KEYS.lyricsFooter, event.target.value);
             requestRedraw();
         });
 
-        document.querySelector(SELECTORS.offsetInput).addEventListener('input', (event) => {
+        document.querySelector(SELECTORS.elementInput.offset).addEventListener('input', (event) => {
             writeStoredValue(STORAGE_KEYS.lyricsOffset, event.target.value);
             requestRedraw();
         });
 
-        document.querySelector(SELECTORS.audioFileInput).addEventListener('change', async (event) => {
+        document.querySelector(SELECTORS.elementInput.audio).addEventListener('change', async (event) => {
             const audioFile = event.target.files?.[0];
             if (!audioFile) return;
-            await saveToDatabase(PERSISTENCE_KEYS.audioFile, audioFile);
+            await saveToDatabase(PERSISTENCE_KEYS.audio, audioFile);
             audioElement.src = URL.createObjectURL(audioFile);
             audioElement.load();
             setupLiveAnalyser(audioElement);
             analyzeAudioBlob(audioFile);
-            appState.exportFileName = audioFile.name.replace(/\.[^/.]+$/, '');
-            writeStoredValue(PERSISTENCE_KEYS.audioFileName, appState.exportFileName);
+            lyricsSettings.export.fileName = audioFile.name.replace(/\.[^/.]+$/, '');
+            writeStoredValue(PERSISTENCE_KEYS.audioFileName, lyricsSettings.export.fileName);
             updateRemoveButtonsVisibility();
         });
 
-        document.querySelector(SELECTORS.backgroundFileInput).addEventListener('change', async (event) => {
+        document.querySelector(SELECTORS.elementInput.background).addEventListener('change', async (event) => {
             const backgroundFile = event.target.files?.[0];
             if (!backgroundFile) return;
             revokeBackgroundObjectUrl();
             const mediaType = backgroundFile.type.startsWith('image/') ? 'image' : 'video';
-            await saveToDatabase(PERSISTENCE_KEYS.backgroundFile, backgroundFile);
+            await saveToDatabase(PERSISTENCE_KEYS.background, backgroundFile);
             writeStoredValue(PERSISTENCE_KEYS.backgroundType, mediaType);
             loadBackgroundResource(URL.createObjectURL(backgroundFile), mediaType, () => {
                 redrawImmediately();
@@ -1716,47 +1750,47 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             });
         });
 
-        document.querySelector(SELECTORS.introFileInput).addEventListener('change', async (event) => {
+        document.querySelector(SELECTORS.elementInput.intro).addEventListener('change', async (event) => {
             const introFile = event.target.files?.[0];
             if (introFile && (introFile.type.startsWith('audio/') || introFile.type.startsWith('video/'))) {
                 try {
-                    await saveToDatabase(PERSISTENCE_KEYS.introFile, introFile);
+                    await saveToDatabase(PERSISTENCE_KEYS.intro, introFile);
                     updateRemoveButtonsVisibility();
                 } catch (error) {
-                    console.warn('Gagal menyimpan file intro:', error);
+                    console.warn(MEDIA_MESSAGES.saveIntroFailed, error);
                 }
             }
         });
 
-        document.querySelector(SELECTORS.removeAudioButton).addEventListener('click', async () => {
-            await saveToDatabase(PERSISTENCE_KEYS.audioFile, null);
+        document.querySelector(SELECTORS.elementButton.removeAudio).addEventListener('click', async () => {
+            await saveToDatabase(PERSISTENCE_KEYS.audio, null);
             resetSpectrumAnalysis();
             audioElement.removeAttribute('src');
             audioElement.load();
-            const audioInput = document.querySelector(SELECTORS.audioFileInput);
+            const audioInput = document.querySelector(SELECTORS.elementInput.audio);
             if (audioInput) audioInput.value = '';
             updateRemoveButtonsVisibility();
         });
 
-        document.querySelector(SELECTORS.removeBackgroundButton).addEventListener('click', async () => {
+        document.querySelector(SELECTORS.elementButton.removeBackground).addEventListener('click', async () => {
             revokeBackgroundObjectUrl();
-            await saveToDatabase(PERSISTENCE_KEYS.backgroundFile, null);
+            await saveToDatabase(PERSISTENCE_KEYS.background, null);
             writeStoredValue(PERSISTENCE_KEYS.backgroundType, '');
             appState.backgroundResource = null;
-            const backgroundInput = document.querySelector(SELECTORS.backgroundFileInput);
+            const backgroundInput = document.querySelector(SELECTORS.elementInput.background);
             if (backgroundInput) backgroundInput.value = '';
             redrawImmediately();
             updateRemoveButtonsVisibility();
         });
 
-        document.querySelector(SELECTORS.removeIntroButton).addEventListener('click', async () => {
-            await saveToDatabase(PERSISTENCE_KEYS.introFile, null);
-            const introInput = document.querySelector(SELECTORS.introFileInput);
+        document.querySelector(SELECTORS.elementButton.removeIntro).addEventListener('click', async () => {
+            await saveToDatabase(PERSISTENCE_KEYS.intro, null);
+            const introInput = document.querySelector(SELECTORS.elementInput.intro);
             if (introInput) introInput.value = '';
             updateRemoveButtonsVisibility();
         });
 
-        document.querySelector(SELECTORS.fullscreenButton).addEventListener('click', () => {
+        document.querySelector(SELECTORS.elementButton.fullscreen).addEventListener('click', () => {
             if (document.fullscreenElement) document.exitFullscreen();
             else previewCanvas.requestFullscreen().catch(console.error);
         });
@@ -1778,12 +1812,12 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
             exportControl.isCancelRequested = true;
         };
 
-        document.querySelector(SELECTORS.spectrumCheckbox).addEventListener('change', (event) => {
+        document.querySelector(SELECTORS.elementInput.spectrum).addEventListener('change', (event) => {
             appState.isSpectrumEnabled = event.target.checked;
             requestRedraw();
         });
 
-        document.querySelectorAll(SELECTORS.displayModeRadios).forEach((radioElement) => {
+        document.querySelectorAll(SELECTORS.elementRadio.displayVersion).forEach((radioElement) => {
             radioElement.addEventListener('change', (event) => {
                 if (!event.target.checked) return;
                 appState.displayMode = event.target.value;
@@ -1793,7 +1827,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
         });
 
         audioElement.addEventListener('loadedmetadata', () => {
-            document.querySelector(SELECTORS.controlContainer).classList.replace('hidden', 'grid');
+            document.querySelector(SELECTORS.elementContainer.control).classList.replace('hidden', 'grid');
             requestRedraw();
         });
 
@@ -1829,55 +1863,55 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
     // Inisialisasi & pemulihan data tersimpan
     async function restoreSavedState() {
         const audioElement = document.querySelector(SELECTORS.elementAudio);
-        const lyricsTextarea = document.querySelector(SELECTORS.lyricsTextarea);
+        const lyricsTextarea = document.querySelector(SELECTORS.elementTextarea.lyrics);
 
         lyricsTextarea.value = normalizeLyricsText(readStoredValue(STORAGE_KEYS.lyricsText, ''));
-        document.querySelector(SELECTORS.headerTextarea).value = readStoredValue(STORAGE_KEYS.headerText, '');
-        document.querySelector(SELECTORS.footerTextarea).value = readStoredValue(STORAGE_KEYS.footerText, '');
-        document.querySelector(SELECTORS.offsetInput).value = readStoredValue(STORAGE_KEYS.lyricsOffset, '0');
-        document.querySelector(SELECTORS.backgroundColorInput).value = appState.backgroundColor;
-        document.querySelector(SELECTORS.keyColorInput).value = appState.keyColor;
-        document.querySelector(SELECTORS.textColorInput).value = appState.textColor;
-        document.querySelector(SELECTORS.spectrumCheckbox).checked = appState.isSpectrumEnabled;
+        document.querySelector(SELECTORS.elementTextarea.header).value = readStoredValue(STORAGE_KEYS.lyricsHeader, '');
+        document.querySelector(SELECTORS.elementTextarea.footer).value = readStoredValue(STORAGE_KEYS.lyricsFooter, '');
+        document.querySelector(SELECTORS.elementInput.offset).value = readStoredValue(STORAGE_KEYS.lyricsOffset, '0');
+        document.querySelector(SELECTORS.elementInput.backgroundColor).value = appState.backgroundColor;
+        document.querySelector(SELECTORS.elementInput.keyColor).value = appState.keyColor;
+        document.querySelector(SELECTORS.elementInput.textColor).value = appState.textColor;
+        document.querySelector(SELECTORS.elementInput.spectrum).checked = appState.isSpectrumEnabled;
 
         const storedBaseYRatio = readStoredValue(STORAGE_KEYS.lineBaseYRatio, '');
         if (storedBaseYRatio !== '' && !Number.isNaN(parseFloat(storedBaseYRatio))) {
             appState.lineBaseYRatio = parseFloat(storedBaseYRatio);
         }
-        document.querySelectorAll(SELECTORS.displayModeRadios).forEach((radioElement) => {
+        document.querySelectorAll(SELECTORS.elementRadio.displayVersion).forEach((radioElement) => {
             radioElement.checked = radioElement.value === appState.displayMode;
         });
         appState.parsedLyrics = parseLyricsText(lyricsTextarea.value);
 
         let restoredAudioFile = null;
-        const savedAudioFile = await loadFromDatabase(PERSISTENCE_KEYS.audioFile);
+        const savedAudioFile = await loadFromDatabase(PERSISTENCE_KEYS.audio);
         if (savedAudioFile) {
             audioElement.src = URL.createObjectURL(savedAudioFile);
             audioElement.load();
             setupLiveAnalyser(audioElement);
             restoredAudioFile = savedAudioFile;
-            appState.exportFileName = readStoredValue(PERSISTENCE_KEYS.audioFileName, '') || savedAudioFile.name?.replace(/\.[^/.]+$/, '') || appState.exportFileName;
+            lyricsSettings.export.fileName = readStoredValue(PERSISTENCE_KEYS.audioFileName, '') || savedAudioFile.name?.replace(/\.[^/.]+$/, '') || lyricsSettings.export.fileName;
         }
 
-        const savedBackgroundFile = await loadFromDatabase(PERSISTENCE_KEYS.backgroundFile);
+        const savedBackgroundFile = await loadFromDatabase(PERSISTENCE_KEYS.background);
         const savedBackgroundType = readStoredValue(PERSISTENCE_KEYS.backgroundType, '');
         if (savedBackgroundFile && savedBackgroundType) {
             loadBackgroundResource(URL.createObjectURL(savedBackgroundFile), savedBackgroundType, () => redrawImmediately());
         }
 
-        const savedIntroFile = await loadFromDatabase(PERSISTENCE_KEYS.introFile);
+        const savedIntroFile = await loadFromDatabase(PERSISTENCE_KEYS.intro);
         if (savedIntroFile && savedIntroFile instanceof Blob && savedIntroFile.type) {
             try {
                 const restoredFile = new File([savedIntroFile], savedIntroFile.name || 'intro', { type: savedIntroFile.type });
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(restoredFile);
-                document.querySelector(SELECTORS.introFileInput).files = dataTransfer.files;
+                document.querySelector(SELECTORS.elementInput.intro).files = dataTransfer.files;
             } catch (error) {
-                console.warn('Gagal memulihkan file intro:', error);
+                console.warn(MEDIA_MESSAGES.restoreIntroFailed, error);
             }
         }
 
-        setExportButtonState(document.querySelector(SELECTORS.exportButton), false);
+        setExportButtonState(document.querySelector(SELECTORS.elementButton.export), false);
         updateRemoveButtonsVisibility();
         requestAnimationFrame(() => redrawImmediately());
         if (restoredAudioFile) analyzeAudioBlob(restoredAudioFile);
@@ -1885,7 +1919,7 @@ import { lyricsBetaSettings, lyricsSettings } from './modules/v1/lyricsSettings'
     }
 
     const init = () => {
-        STATE_PREVIEW.previewContext = document.querySelector(SELECTORS.elementPreviewCanvas).getContext('2d', {
+        STATE_PREVIEW.previewContext = document.querySelector(SELECTORS.elementCanvas.preview).getContext('2d', {
             alpha: true
         });
 

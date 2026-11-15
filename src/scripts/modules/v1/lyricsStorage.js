@@ -2,9 +2,9 @@ import { lyricsSettings } from './lyricsSettings';
 
 const storageOpenDatabase = () => {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(lyricsSettings.lyricsDatabaseName, lyricsSettings.lyricsDatabaseVersion);
+        const request = indexedDB.open(lyricsSettings.storage.database.name, lyricsSettings.storage.database.version);
         request.onupgradeneeded = () => {
-            request.result.createObjectStore(lyricsSettings.lyricsDatabaseStoreName);
+            request.result.createObjectStore(lyricsSettings.storage.database.storeName);
         };
 
         request.onsuccess = () => resolve(request.result);
@@ -18,16 +18,16 @@ export const lyricsStorageLoad = (storageKey, storageFallback = '') => {
 
 export const lyricsStorageFileSave = async (key, fileBlob) => {
     const database = await storageOpenDatabase();
-    const transaction = database.transaction(lyricsSettings.lyricsDatabaseStoreName, lyricsSettings.lyricsDatabaseReadWriteMode);
+    const transaction = database.transaction(lyricsSettings.storage.database.storeName, 'readwrite');
 
-    transaction.objectStore(lyricsSettings.lyricsDatabaseStoreName).put(fileBlob, key);
+    transaction.objectStore(lyricsSettings.storage.database.storeName).put(fileBlob, key);
 };
 
 export const lyricsStorageFileLoad = async (key) => {
     const database = await storageOpenDatabase();
 
     return new Promise((resolve) => {
-        const request = database.transaction(lyricsSettings.lyricsDatabaseStoreName).objectStore(lyricsSettings.lyricsDatabaseStoreName).get(key);
+        const request = database.transaction(lyricsSettings.storage.database.storeName).objectStore(lyricsSettings.storage.database.storeName).get(key);
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => resolve(null);

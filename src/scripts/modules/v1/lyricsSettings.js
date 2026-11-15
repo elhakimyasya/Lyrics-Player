@@ -4,15 +4,15 @@ const spectrumDefaults = {
     smoothingFactor: 0.1,
     bassFilterFrequency: 150,
     bassFilterGainDecibels: 6,
-    barCount: 80,
+    barCount: 100,
     barGap: 3,
     peak: {
         enabled: true,
-        thickness: 3,
-        opacityPercent: 85,
-        holdTimeMilliseconds: 500,
+        thickness: 2,
+        opacityPercent: 30,
+        holdTimeMilliseconds: 30,
         fallingMode: 'steady',
-        fallSpeedDecibelsPerSecond: 24,
+        fallSpeedDecibelsPerSecond: 60,
     },
 };
 const defaultExportFileName = 'lyrics-export';

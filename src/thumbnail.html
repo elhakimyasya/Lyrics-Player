@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Thumbnail Generator | Yasya El Hakim</title>
+        <link href="https://www.elcreativeacademy.com/favicon.ico" rel="apple-touch-startup-image" />
+        <link href="https://www.elcreativeacademy.com/favicon.ico" rel="apple-touch-icon" />
+        <link href="https://www.elcreativeacademy.com/favicon.ico" rel="apple-touch-icon" sizes="32x32" />
+        <link href="https://www.elcreativeacademy.com/favicon.ico" rel="shortcut icon" type="image/icon" />
+        <link href="https://www.elcreativeacademy.com/favicon.ico" rel="icon" type="image/x-icon" />
+        <link rel="stylesheet" href=".././dist/styles/style.min.css" />
+    </head>
+
+    <body class="bg-background text-text flex min-h-screen flex-col items-center p-4 lg:p-10">
+        <div class="w-full max-w-7xl">
+            <header class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                <h1 class="text-text mt-1 text-4xl font-extrabold">THUMBNAIL<span class="text-meta">GENERATOR</span></h1>
+
+                <div class="flex gap-2">
+                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">By Yasya El Hakim</div>
+                </div>
+            </header>
+
+            <main class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                <div class="order-2 flex flex-col gap-4 lg:order-none lg:col-span-3">
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-cyan h-2 w-2 rounded-full"></span> Content</h2>
+                        </div>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Title Text</span>
+                            </div>
+
+                            <textarea rows="2" class="element_input_text_title border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan w-full resize-y rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Title Text"></textarea>
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Content Text</span>
+                            </div>
+
+                            <textarea rows="3" class="element_input_text_content border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan w-full resize-y rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Content Text"></textarea>
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Subtitle Text</span>
+                            </div>
+
+                            <textarea rows="2" class="element_input_text_subtitle border-border focus:border-cyan focus:ring-cyan/10 bg-foreground text-cyan w-full resize-y rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Subtitle Text"></textarea>
+                        </label>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-emerald h-2 w-2 rounded-full"></span> Header & Footer</h2>
+                        </div>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Header Text</span>
+                            </div>
+
+                            <input class="element_input_text_header border-border focus:border-emerald focus:ring-emerald/10 bg-foreground text-emerald w-full rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Header Text" type="text" />
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Footer Text</span>
+                            </div>
+
+                            <input class="element_input_text_footer border-border focus:border-teal focus:ring-teal/10 bg-foreground text-teal w-full rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Footer Text" type="text" />
+                        </label>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-teal h-2 w-2 rounded-full"></span> Ribbon</h2>
+                        </div>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Title Text</span>
+                            </div>
+
+                            <input class="element_input_text_ribbon_title border-border focus:border-teal focus:ring-teal/10 bg-foreground text-teal w-full rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Title Text" type="text" />
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Content Text</span>
+                            </div>
+
+                            <input class="element_input_text_ribbon_content border-border focus:border-teal focus:ring-teal/10 bg-foreground text-teal w-full rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Content Text" type="text" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="order-1 flex flex-col gap-4 lg:order-none lg:col-span-6">
+                    <div class="flex w-full flex-col items-center justify-center gap-4 lg:sticky lg:top-4">
+                        <div class="border-key w-full overflow-hidden rounded-2xl border shadow-2xl">
+                            <div class="bg-background group relative aspect-video w-full overflow-hidden">
+                                <canvas class="element_canvas_preview block h-full w-full object-cover" width="1920" height="1080"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="element_container_controll border-border flex w-full flex-col items-center gap-4 rounded-2xl border p-4 md:flex-row">
+                            <div class="grid w-full shrink-0 grid-cols-2 gap-4">
+                                <button type="button" class="element_button_reset text-meta border-border bg-foreground hover:text-text line-clamp-1 cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">RESET</button>
+
+                                <button type="button" class="element_button_download text-text border-key bg-key line-clamp-1 cursor-pointer rounded-lg border px-8 py-2.5 text-xs font-bold shadow-lg transition-all active:scale-95">DOWNLOAD</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="order-3 flex flex-col gap-4 lg:order-none lg:col-span-3">
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-sky h-2 w-2 rounded-full"></span> Options</h2>
+                        </div>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Background Image</span>
+                                <button type="button" class="element_button_remove_background text-red hidden cursor-pointer font-mono text-xs transition-colors">Remove</button>
+                            </div>
+
+                            <input class="element_input_background border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky file:bg-sky file:text-foreground w-full cursor-pointer rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all file:mr-4 file:rounded-md file:px-2 file:py-1 focus:ring-2" type="file" accept="image/*" />
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Background Align</span>
+                            </div>
+
+                            <select class="element_input_background_align border-border focus:border-sky focus:ring-sky/10 bg-foreground text-sky w-full cursor-pointer rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2">
+                                <option value="center" selected>Center</option>
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                            </select>
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Background Image Opacity</span>
+                                <output class="element_input_background_opacity_value text-sky text-xs">25%</output>
+                            </div>
+
+                            <input type="range" min="0" max="100" step="1" value="25" class="element_input_background_opacity accent-sky w-full" />
+                        </label>
+
+                        <label class="block cursor-pointer space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-meta block text-xs font-semibold">Font Family</span>
+                            </div>
+
+                            <input class="element_input_font_family border-border focus:border-indigo focus:ring-indigo/10 bg-foreground text-indigo w-full rounded-xl border p-3 font-mono text-xs leading-relaxed outline-none transition-all focus:ring-2" placeholder="Font Family" value="Bernoru Black Medium" type="text" />
+                        </label>
+                    </div>
+
+                    <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-indigo h-2 w-2 rounded-full"></span> Colors</h2>
+                        </div>
+
+                        <div class="border-border grid grid-cols-2 gap-3">
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Background Color</span>
+
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#000000" class="element_input_bg_color h-6 w-6 cursor-pointer border-none bg-transparent" />
+
+                                    <span class="font-mono text-xs">HEX</span>
+                                </div>
+                            </label>
+
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Key Color</span>
+
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#ffde59" class="element_input_key_color h-6 w-6 shrink-0 grow-0 cursor-pointer border-none bg-transparent" />
+
+                                    <label class="flex w-full items-center justify-between space-x-2">
+                                        <span class="line-clamp-1 select-none font-mono text-xs">Match Image</span>
+                                        <input type="checkbox" class="element_input_match_image_color accent-indigo h-4 w-4 cursor-pointer" />
+                                    </label>
+                                </div>
+                            </label>
+
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Text Color</span>
+
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#ffffff" class="element_input_text_color h-6 w-6 cursor-pointer border-none bg-transparent" />
+
+                                    <span class="font-mono text-xs">HEX</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="mb-8 mt-12 text-center">
+                <p class="text-meta text-xs font-bold uppercase tracking-wider">Thumbnail Generator | Yasya El Hakim</p>
+            </footer>
+        </div>
+    </body>
+
+    <script src="../dist/scripts/script-thumbnail.min.js"></script>
+</html>

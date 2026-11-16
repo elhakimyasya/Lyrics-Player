@@ -15,13 +15,10 @@
     <body class="bg-background text-text flex min-h-screen flex-col items-center p-4 lg:p-10">
         <div class="w-full max-w-7xl">
             <header class="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-                <div>
-                    <span class="text-key text-xs font-bold uppercase">Audio Visualizer</span>
-                    <h1 class="text-text mt-1 text-4xl font-extrabold">LYRICS<span class="text-meta">PLAYER</span></h1>
-                </div>
+                <h1 class="text-text mt-1 text-4xl font-extrabold">LYRICS<span class="text-meta">PLAYER</span></h1>
 
                 <div class="flex gap-2">
-                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">Stable v4</div>
+                    <div class="border-key/20 bg-key/10 text-key rounded-full border px-3 py-1 text-xs font-bold uppercase">By Yasya El Hakim</div>
                 </div>
             </header>
 
@@ -128,35 +125,37 @@
                             <h2 class="text-meta flex items-center gap-2 text-xs font-bold uppercase"><span class="bg-indigo h-2 w-2 rounded-full"></span> Colors</h2>
                         </div>
 
-                        <label class="block cursor-pointer space-y-2">
-                            <span class="text-meta block text-xs font-semibold">Background Color</span>
+                        <div class="border-border grid grid-cols-2 gap-3">
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Background Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
-                                <input type="color" value="#000000" class="element_input_bg_color h-6 w-6 cursor-pointer border-none bg-transparent" />
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#000000" class="element_input_bg_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
-                                <span class="font-mono text-xs">HEX</span>
-                            </div>
-                        </label>
+                                    <span class="font-mono text-xs">HEX</span>
+                                </div>
+                            </label>
 
-                        <label class="block cursor-pointer space-y-2">
-                            <span class="text-meta block text-xs font-semibold">Key Color</span>
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Key Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
-                                <input type="color" value="#ffde59" class="element_input_key_color h-6 w-6 cursor-pointer border-none bg-transparent" />
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#ffde59" class="element_input_key_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
-                                <span class="font-mono text-xs">HEX</span>
-                            </div>
-                        </label>
+                                    <span class="font-mono text-xs">HEX</span>
+                                </div>
+                            </label>
 
-                        <label class="block cursor-pointer space-y-2">
-                            <span class="text-meta block text-xs font-semibold">Text Color</span>
+                            <label class="block cursor-pointer space-y-2">
+                                <span class="text-meta block text-xs font-semibold">Text Color</span>
 
-                            <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
-                                <input type="color" value="#ffffff" class="element_input_text_color h-6 w-6 cursor-pointer border-none bg-transparent" />
+                                <div class="border-border hover:border-indigo hover:ring-indigo/10 bg-foreground text-meta flex w-full cursor-pointer flex-row items-center gap-2 rounded-xl border p-2 font-mono text-xs leading-relaxed outline-none transition-all hover:ring-2">
+                                    <input type="color" value="#ffffff" class="element_input_text_color h-6 w-6 cursor-pointer border-none bg-transparent" />
 
-                                <span class="font-mono text-xs">HEX</span>
-                            </div>
-                        </label>
+                                    <span class="font-mono text-xs">HEX</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="border-border space-y-4 rounded-2xl border p-4 shadow-2xl">
@@ -172,45 +171,45 @@
                             </label>
                         </div>
 
-                        <div class="border-border grid grid-cols-2 gap-3 border-t pt-4">
-                            <label class="space-y-1">
+                        <div class="border-border grid grid-cols-2 gap-3">
+                            <label class="space-y-2">
                                 <span class="text-meta block text-xs font-semibold">Bar count</span>
                                 <input type="number" min="1" max="256" step="1" class="element_input_spectrum_bar_count border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
                             </label>
 
-                            <label class="space-y-1">
+                            <label class="space-y-2">
                                 <span class="text-meta block text-xs font-semibold">Bar margin (px)</span>
                                 <input type="number" min="0" max="100" step="1" class="element_input_spectrum_bar_gap border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
                             </label>
                         </div>
 
-                        <div class="border-border space-y-3 border-t pt-4">
+                        <div class="border-border space-y-3">
                             <label class="flex cursor-pointer items-center justify-between gap-3">
                                 <span class="text-meta text-xs font-semibold">Peak marker</span>
                                 <input type="checkbox" class="element_input_spectrum_peak_enabled accent-key h-4 w-4" />
                             </label>
 
                             <div class="grid grid-cols-2 gap-3">
-                                <label class="space-y-1">
-                                    <span class="text-meta block text-xs font-semibold">Peak thickness (px)</span>
+                                <label class="space-y-2">
+                                    <span class="text-meta block text-xs font-semibold">Peak Thickness <sup>(px)</sup></span>
                                     <input type="number" min="1" max="24" step="1" class="element_input_spectrum_peak_thickness border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
                                 </label>
 
-                                <label class="space-y-1">
+                                <label class="cursor-pointer space-y-2">
                                     <span class="text-meta flex items-center justify-between text-xs font-semibold">
-                                        <span>Peak opacity</span>
+                                        <span>Peak Opacity</span>
                                         <output class="text-key">85%</output>
                                     </span>
                                     <input type="range" min="0" max="100" step="1" class="element_input_spectrum_peak_opacity accent-key w-full" />
                                 </label>
 
-                                <label class="space-y-1">
-                                    <span class="text-meta block text-xs font-semibold">Peak hold (ms)</span>
+                                <label class="space-y-2">
+                                    <span class="text-meta block text-xs font-semibold">Peak Hold <sup>(ms)</sup></span>
                                     <input type="number" min="0" max="10000" step="50" class="element_input_spectrum_peak_hold_time border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
                                 </label>
 
-                                <label class="space-y-1">
-                                    <span class="text-meta block text-xs font-semibold">Peak falling</span>
+                                <label class="space-y-2">
+                                    <span class="text-meta block text-xs font-semibold">Peak Falling</span>
                                     <select class="element_input_spectrum_peak_falling_mode border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs">
                                         <option value="steady">Steady</option>
                                         <option value="gravity">Gravity</option>
@@ -218,8 +217,8 @@
                                     </select>
                                 </label>
 
-                                <label class="col-span-2 space-y-1">
-                                    <span class="text-meta block text-xs font-semibold">Peak fall speed (dB/s)</span>
+                                <label class="space-y-2">
+                                    <span class="text-meta block text-xs font-semibold">Peak Fall Speed <sup>(dB/s)</sup></span>
                                     <input type="number" min="1" max="100" step="1" class="element_input_spectrum_peak_fall_speed border-border bg-foreground text-text w-full rounded-lg border px-2 py-1.5 font-mono text-xs" />
                                 </label>
                             </div>

@@ -1,4 +1,12 @@
 (() => {
+    const STORAGE_KEY_PREFIX = 'thumb_';
+    const PERSISTENT_INPUTS = [
+        'textHeaderInput', 'textTitleInput', 'textContentInput', 'textSubtitleInput',
+        'textFooterInput', 'textRibbonTitleInput', 'textRibbonContentInput',
+        'fontFamilyInput', 'backgroundOpacityInput', 'backgroundAlignInput',
+        'backgroundColorInput', 'keyColorInput', 'textColorInput', 'matchImageColorInput'
+    ];
+
     const DOMElements = {
         canvasPreview: document.querySelector('.element_canvas_preview'),
         textHeaderInput: document.querySelector('.element_input_text_header'),
@@ -10,6 +18,7 @@
         textRibbonContentInput: document.querySelector('.element_input_text_ribbon_content'),
         fontFamilyInput: document.querySelector('.element_input_font_family'),
         backgroundInput: document.querySelector('.element_input_background'),
+        backgroundUrlInput: document.querySelector('.element_input_background_url'),
         removeBackgroundButton: document.querySelector('.element_button_remove_background'),
         backgroundOpacityInput: document.querySelector('.element_input_background_opacity'),
         backgroundOpacityOutput: document.querySelector('.element_input_background_opacity_value'),
@@ -94,6 +103,23 @@
         DOMElements.keyColorInput,
         DOMElements.textColorInput
     ];
+
+    const loadState = () => {
+        PERSISTENT_INPUTS.forEach((key) => {
+            const el = DOMElements[key];
+            if (!el) return;
+            const stored = localStorage.getItem(STORAGE_KEY_PREFIX + key);
+            if (stored !== null) el.value = stored;
+            if (el.type === 'checkbox') el.checked = stored === 'true';
+        });
+    };
+
+    const saveState = (key) => {
+        const el = DOMElements[key];
+        if (!el) return;
+        const value = el.type === 'checkbox' ? String(el.checked) : el.value;
+        localStorage.setItem(STORAGE_KEY_PREFIX + key, value);
+    };
 
     let imageBackground = null;
     let imageObjectUrl = null;
@@ -638,6 +664,17 @@
         element.addEventListener('change', handleInputUpdate);
     });
 
+    // Persist text/checkbox/range inputs to localStorage
+    Object.entries(DOMElements).forEach(([key, el]) => {
+        if (!el || ['canvasPreview', 'removeBackgroundButton', 'downloadButton', 'resetButton'].includes(key)) return;
+        if (el.tagName === 'INPUT' && el.type === 'file') return;
+        const onSave = () => saveState(key);
+        el.addEventListener('input', onSave);
+        el.addEventListener('change', onSave);
+    });
+
+    loadState();
+
     if (DOMElements.matchImageColorInput) {
         DOMElements.matchImageColorInput.addEventListener('change', () => {
             synchronizeKeyColorWithToggle();
@@ -661,6 +698,31 @@
             renderCanvas();
         };
         loadedImage.src = imageObjectUrl;
+    });
+
+    DOMElements.backgroundUrlInput.addEventListener('change', async () => {
+        const url = DOMElements.backgroundUrlInput.value.trim();
+        if (!url) return;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) return;
+
+            if (imageObjectUrl) URL.revokeObjectURL(imageObjectUrl);
+            imageObjectUrl = URL.createObjectURL(blob);
+
+            const loadedImage = new Image();
+            loadedImage.onload = () => {
+                imageBackground = loadedImage;
+                cachedExtractedHexColor = extractDominantVibrantHexColorFromImage(loadedImage);
+                DOMElements.removeBackgroundButton.classList.remove('hidden');
+                synchronizeKeyColorWithToggle();
+                renderCanvas();
+            };
+            loadedImage.src = imageObjectUrl;
+        } catch {
+            console.error('Failed to load background image from URL:', url);
+        }
     });
 
     DOMElements.removeBackgroundButton.addEventListener('click', () => {

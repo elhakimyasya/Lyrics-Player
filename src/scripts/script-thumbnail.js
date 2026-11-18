@@ -1,10 +1,21 @@
 (() => {
     const STORAGE_KEY_PREFIX = 'thumb_';
     const PERSISTENT_INPUTS = [
-        'textHeaderInput', 'textTitleInput', 'textContentInput', 'textSubtitleInput',
-        'textFooterInput', 'textRibbonTitleInput', 'textRibbonContentInput',
-        'fontFamilyInput', 'backgroundOpacityInput', 'backgroundAlignInput',
-        'backgroundColorInput', 'keyColorInput', 'textColorInput', 'matchImageColorInput'
+        'textHeaderInput',
+        'textTitleInput',
+        'textContentInput',
+        'textSubtitleInput',
+        'textFooterInput',
+        'textRibbonTitleInput',
+        'textRibbonContentInput',
+        'fontFamilyInput',
+        'backgroundOpacityInput',
+        'backgroundAlignInput',
+        'backgroundColorInput',
+        'keyColorInput',
+        'textColorInput',
+        'matchImageColorInput',
+        'backgroundUrlInput'
     ];
 
     const DOMElements = {
@@ -49,7 +60,7 @@
         contentFontSize: 158,
         subtitleFontSize: 64,
         contentGroupGap: 24,
-        shrinkTriggerLineCount: 2,
+        shrinkTriggerLineCount: 1,
         shrinkMaxContainerHeight: 470,
         shrinkMinimumFontSize: 48,
         shrinkStepSize: 2,
@@ -106,18 +117,30 @@
 
     const loadState = () => {
         PERSISTENT_INPUTS.forEach((key) => {
-            const el = DOMElements[key];
-            if (!el) return;
+            const element = DOMElements[key];
+            if (!element) {
+                return;
+            }
+
             const stored = localStorage.getItem(STORAGE_KEY_PREFIX + key);
-            if (stored !== null) el.value = stored;
-            if (el.type === 'checkbox') el.checked = stored === 'true';
+            if (stored !== null) {
+                element.value = stored;
+            }
+
+            if (element.type === 'checkbox') {
+                element.checked = stored === 'true';
+            }
         });
     };
 
     const saveState = (key) => {
-        const el = DOMElements[key];
-        if (!el) return;
-        const value = el.type === 'checkbox' ? String(el.checked) : el.value;
+        const element = DOMElements[key];
+        if (!element) {
+            return;
+        }
+
+        const value = element.type === 'checkbox' ? String(element.checked) : element.value;
+
         localStorage.setItem(STORAGE_KEY_PREFIX + key, value);
     };
 
@@ -128,6 +151,7 @@
 
     const getSanitizedFontFamily = () => {
         const rawFontFamily = DOMElements.fontFamilyInput.value.trim() || 'Arial';
+
         return rawFontFamily.replace(/["']/g, '');
     };
 
@@ -135,11 +159,8 @@
         return `${fontWeight} ${fontSize}px "${getSanitizedFontFamily()}", Arial, sans-serif`;
     };
 
-    const sanitizeFileNamePart = (rawText) => {
-        return String(rawText || '')
-            .replace(/\s+/g, ' ')
-            .replace(/[\\/:*?"<>|]/g, '')
-            .trim();
+    const sanitizeFileNamePart = (text) => {
+        return String(text || '').replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '').trim();
     };
 
     const generateExportFileName = () => {
@@ -150,8 +171,9 @@
         return fileNameParts.length ? `${fileNameParts.join(' - ')}.png` : CANVAS_CONFIG.fallbackExportFileName;
     };
 
-    const convertComponentToHex = (colorValue) => {
-        const clampedValue = Math.max(0, Math.min(255, Math.round(colorValue)));
+    const convertComponentToHex = (color) => {
+        const clampedValue = Math.max(0, Math.min(255, Math.round(color)));
+
         return clampedValue.toString(16).padStart(2, '0');
     };
 
@@ -169,9 +191,7 @@
         }
 
         const channelDelta = maxChannel - minChannel;
-        const saturation = lightness > 0.5
-            ? channelDelta / (2 - maxChannel - minChannel)
-            : channelDelta / (maxChannel + minChannel);
+        const saturation = lightness > 0.5 ? channelDelta / (2 - maxChannel - minChannel) : channelDelta / (maxChannel + minChannel);
 
         let hue = 0;
         if (maxChannel === normalizedRed) {
@@ -181,6 +201,7 @@
         } else {
             hue = (normalizedRed - normalizedGreen) / channelDelta + 4;
         }
+
         hue /= 6;
 
         return { hue, saturation, lightness };
@@ -188,11 +209,26 @@
 
     const convertHueToRgbChannel = (primaryBound, secondaryBound, adjustedHue) => {
         let wrappedHue = adjustedHue;
-        if (wrappedHue < 0) wrappedHue += 1;
-        if (wrappedHue > 1) wrappedHue -= 1;
-        if (wrappedHue < 1 / 6) return primaryBound + (secondaryBound - primaryBound) * 6 * wrappedHue;
-        if (wrappedHue < 1 / 2) return secondaryBound;
-        if (wrappedHue < 2 / 3) return primaryBound + (secondaryBound - primaryBound) * (2 / 3 - wrappedHue) * 6;
+        if (wrappedHue < 0) {
+            wrappedHue += 1;
+        }
+
+        if (wrappedHue > 1) {
+            wrappedHue -= 1;
+        }
+
+        if (wrappedHue < 1 / 6) {
+            return primaryBound + (secondaryBound - primaryBound) * 6 * wrappedHue;
+        }
+
+        if (wrappedHue < 1 / 2) {
+            return secondaryBound;
+        }
+
+        if (wrappedHue < 2 / 3) {
+            return primaryBound + (secondaryBound - primaryBound) * (2 / 3 - wrappedHue) * 6;
+        }
+
         return primaryBound;
     };
 
@@ -200,14 +236,12 @@
         if (saturation === 0) {
             const grayChannel = lightness * 255;
             const hexGray = convertComponentToHex(grayChannel);
+
             return `#${hexGray}${hexGray}${hexGray}`;
         }
 
-        const secondaryBound = lightness < 0.5
-            ? lightness * (1 + saturation)
-            : lightness + saturation - lightness * saturation;
+        const secondaryBound = lightness < 0.5 ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
         const primaryBound = 2 * lightness - secondaryBound;
-
         const redChannel = convertHueToRgbChannel(primaryBound, secondaryBound, hue + 1 / 3) * 255;
         const greenChannel = convertHueToRgbChannel(primaryBound, secondaryBound, hue) * 255;
         const blueChannel = convertHueToRgbChannel(primaryBound, secondaryBound, hue - 1 / 3) * 255;
@@ -244,19 +278,19 @@
         const pixelIndices = Array.from({ length: pixelData.length / 4 }, (_, index) => index * 4);
         pixelIndices.forEach((pixelIndex) => {
             const alphaChannel = pixelData[pixelIndex + 3];
-            if (alphaChannel < minimumAlpha) return;
+            if (alphaChannel < minimumAlpha) {
+                return;
+            }
 
             const red = pixelData[pixelIndex];
             const green = pixelData[pixelIndex + 1];
             const blue = pixelData[pixelIndex + 2];
-
             const perceivedBrightness = (red * 299 + green * 587 + blue * 114) / 1000;
             if (perceivedBrightness < minimumBrightnessThreshold || perceivedBrightness > maximumBrightnessThreshold) {
                 return;
             }
 
             const { hue, saturation, lightness } = convertRgbToHsl(red, green, blue);
-
             const generalWeight = 0.2 + saturation;
             fallbackWeightedRed += red * generalWeight;
             fallbackWeightedGreen += green * generalWeight;
@@ -266,7 +300,6 @@
             if (saturation >= minimumSaturationThreshold) {
                 const bucketKey = Math.floor(hue * 36) % 36;
                 const vibrancyWeight = Math.pow(saturation, 2) * (1 - Math.abs(lightness - 0.5));
-
                 const currentBucket = hueBuckets.get(bucketKey) || {
                     totalWeight: 0,
                     weightedRed: 0,
@@ -286,7 +319,6 @@
         let selectedRed = 0;
         let selectedGreen = 0;
         let selectedBlue = 0;
-
         if (hueBuckets.size > 0) {
             let dominantBucket = null;
             hueBuckets.forEach((bucket) => {
@@ -307,19 +339,16 @@
         }
 
         const finalHsl = convertRgbToHsl(selectedRed, selectedGreen, selectedBlue);
-        const adjustedLightness = Math.max(
-            minimumReadableLightness,
-            Math.min(maximumReadableLightness, finalHsl.lightness)
-        );
-        const adjustedSaturation = finalHsl.saturation > 0.1
-            ? Math.max(finalHsl.saturation, 0.65)
-            : finalHsl.saturation;
+        const adjustedLightness = Math.max(minimumReadableLightness, Math.min(maximumReadableLightness, finalHsl.lightness));
+        const adjustedSaturation = finalHsl.saturation > 0.1 ? Math.max(finalHsl.saturation, 0.65) : finalHsl.saturation;
 
         return convertHslToHex(finalHsl.hue, adjustedSaturation, adjustedLightness);
     };
 
     const synchronizeKeyColorWithToggle = () => {
-        if (!DOMElements.matchImageColorInput) return;
+        if (!DOMElements.matchImageColorInput) {
+            return;
+        }
 
         const isMatchEnabled = DOMElements.matchImageColorInput.checked;
         if (isMatchEnabled && imageBackground && cachedExtractedHexColor) {
@@ -341,15 +370,23 @@
             URL.revokeObjectURL(imageObjectUrl);
             imageObjectUrl = null;
         }
+
         DOMElements.backgroundInput.value = '';
         DOMElements.removeBackgroundButton.classList.add('hidden');
+
         synchronizeKeyColorWithToggle();
     };
 
     const calculateAlignedVerticalOffset = (scaledHeight, alignmentMode) => {
         const verticalDifference = CANVAS_CONFIG.height - scaledHeight;
-        if (alignmentMode === 'top') return 0;
-        if (alignmentMode === 'bottom') return verticalDifference;
+        if (alignmentMode === 'top') {
+            return 0;
+        }
+
+        if (alignmentMode === 'bottom') {
+            return verticalDifference;
+        }
+
         return verticalDifference / 2;
     };
 
@@ -357,12 +394,11 @@
         canvasContext.fillStyle = DOMElements.backgroundColorInput.value || defaultStyleConfiguration.backgroundColorInput;
         canvasContext.fillRect(0, 0, CANVAS_CONFIG.width, CANVAS_CONFIG.height);
 
-        if (!imageBackground) return;
+        if (!imageBackground) {
+            return;
+        }
 
-        const scaleRatio = Math.max(
-            CANVAS_CONFIG.width / imageBackground.width,
-            CANVAS_CONFIG.height / imageBackground.height
-        );
+        const scaleRatio = Math.max(CANVAS_CONFIG.width / imageBackground.width, CANVAS_CONFIG.height / imageBackground.height);
         const scaledWidth = imageBackground.width * scaleRatio;
         const scaledHeight = imageBackground.height * scaleRatio;
         const offsetX = (CANVAS_CONFIG.width - scaledWidth) / 2;
@@ -375,18 +411,22 @@
         canvasContext.restore();
     };
 
+    const normalizeText = (rawText) => {
+        return String(rawText || '').replace(/\r?\n/g, '\n').split('\n').map((p) => p.trim().replace(/\s+/g, ' ')).filter(Boolean).join('\n');
+    };
+
     const wrapParagraphLines = (rawText, maximumWidth, fontStyle) => {
         canvasContext.font = fontStyle;
-        const paragraphs = String(rawText || '').split(/\r?\n/);
+        const paragraphs = normalizeText(rawText).split('\n');
         const wrappedLines = [];
 
         paragraphs.forEach((paragraph) => {
-            if (!paragraph.trim()) {
-                wrappedLines.push('');
+            const trimmed = paragraph.trim();
+            if (!trimmed) {
                 return;
             }
 
-            const words = paragraph.split(/\s+/);
+            const words = trimmed.split(/\s+/);
             let currentLine = '';
 
             words.forEach((word) => {
@@ -408,19 +448,30 @@
     const calculateTextLayoutMetrics = (rawText, initialFontSize, fontWeight, maximumWidth, lineSpacing = 0, shouldShrink = false) => {
         let activeFontSize = initialFontSize;
         let wrappedLines = wrapParagraphLines(rawText, maximumWidth, buildFontStyle(fontWeight, activeFontSize));
+        let totalBlockHeight = wrappedLines.length * activeFontSize * CANVAS_CONFIG.lineHeightMultiplier;
 
-        if (shouldShrink && wrappedLines.length > CANVAS_CONFIG.shrinkTriggerLineCount) {
-            while (
-                wrappedLines.length * activeFontSize * CANVAS_CONFIG.lineHeightMultiplier > CANVAS_CONFIG.shrinkMaxContainerHeight &&
-                activeFontSize > CANVAS_CONFIG.shrinkMinimumFontSize
-            ) {
+        if (shouldShrink) {
+            const paragraphs = normalizeText(rawText).split('\n').filter((p) => p.trim());
+            const targetLineCount = paragraphs.length || 1;
+            while ((wrappedLines.length > targetLineCount || totalBlockHeight > CANVAS_CONFIG.shrinkMaxContainerHeight) && activeFontSize > CANVAS_CONFIG.shrinkMinimumFontSize) {
                 activeFontSize -= CANVAS_CONFIG.shrinkStepSize;
                 wrappedLines = wrapParagraphLines(rawText, maximumWidth, buildFontStyle(fontWeight, activeFontSize));
+                totalBlockHeight = wrappedLines.length * activeFontSize * CANVAS_CONFIG.lineHeightMultiplier;
+            }
+
+            // Step 2: grow back one step if it still fits without adding lines.
+            const nextSize = activeFontSize + CANVAS_CONFIG.shrinkStepSize;
+            const nextLines = wrapParagraphLines(rawText, maximumWidth, buildFontStyle(fontWeight, nextSize));
+            const nextHeight = nextLines.length * nextSize * CANVAS_CONFIG.lineHeightMultiplier;
+            if (nextLines.length === wrappedLines.length && nextHeight <= CANVAS_CONFIG.shrinkMaxContainerHeight) {
+                activeFontSize = nextSize;
+                wrappedLines = nextLines;
+                totalBlockHeight = nextHeight;
             }
         }
 
         const singleLineHeight = activeFontSize * CANVAS_CONFIG.lineHeightMultiplier + lineSpacing;
-        const totalBlockHeight = wrappedLines.length * singleLineHeight - lineSpacing;
+        totalBlockHeight = wrappedLines.length * singleLineHeight - lineSpacing;
 
         return {
             wrappedLines,
@@ -432,7 +483,9 @@
 
     const renderCalculatedTextLines = (textMetrics, centerPositionY, fillColor, fontWeight, maximumWidth) => {
         const { wrappedLines, activeFontSize, singleLineHeight, totalBlockHeight } = textMetrics;
-        if (!wrappedLines.length) return;
+        if (!wrappedLines.length) {
+            return;
+        }
 
         let currentPositionY = centerPositionY - totalBlockHeight / 2 + activeFontSize / 2;
 
@@ -445,6 +498,7 @@
             if (lineText) {
                 canvasContext.fillText(lineText, CANVAS_CONFIG.centerX, currentPositionY, maximumWidth);
             }
+
             currentPositionY += singleLineHeight;
         });
 
@@ -452,17 +506,26 @@
     };
 
     const drawHeaderSection = (selectedKeyColor, selectedTextColor) => {
-        const headerText = DOMElements.textHeaderInput.value;
-        if (!headerText.trim()) return;
+        const headerText = normalizeText(DOMElements.textHeaderInput.value);
+        if (!headerText.trim()) {
+            return;
+        }
 
         canvasContext.save();
         canvasContext.font = buildFontStyle(CANVAS_CONFIG.fontWeightBold, CANVAS_CONFIG.headerFontSize);
+
         applyCanvasTextAlignment();
 
         if (headerText === 'SyncMusics') {
             const brandParts = [
-                { text: 'Sync', color: selectedKeyColor },
-                { text: 'Musics', color: selectedTextColor }
+                {
+                    text: 'Sync',
+                    color: selectedKeyColor
+                },
+                {
+                    text: 'Musics',
+                    color: selectedTextColor
+                }
             ];
 
             let totalBrandWidth = 0;
@@ -472,6 +535,7 @@
             });
 
             let currentBrandX = (CANVAS_CONFIG.width - totalBrandWidth) / 2;
+            
             applyCanvasTextAlignment('left', 'middle');
 
             brandParts.forEach((part) => {
@@ -517,7 +581,7 @@
             if (!definition.rawText.trim()) return;
 
             const layoutMetrics = calculateTextLayoutMetrics(
-                definition.rawText,
+                normalizeText(definition.rawText),
                 definition.fontSize,
                 CANVAS_CONFIG.fontWeightBold,
                 CANVAS_CONFIG.maxTextWidth,
@@ -554,8 +618,8 @@
     };
 
     const drawCornerRibbon = () => {
-        const ribbonTitleText = DOMElements.textRibbonTitleInput.value.trim();
-        const ribbonContentText = DOMElements.textRibbonContentInput.value.trim();
+        const ribbonTitleText = normalizeText(DOMElements.textRibbonTitleInput.value);
+        const ribbonContentText = normalizeText(DOMElements.textRibbonContentInput.value);
         if (!ribbonTitleText && !ribbonContentText) return;
 
         const {
@@ -625,7 +689,7 @@
         drawHeaderSection(selectedKeyColor, selectedTextColor);
         drawCenterContentGroup(selectedKeyColor, selectedTextColor);
 
-        const footerText = DOMElements.textFooterInput.value;
+        const footerText = normalizeText(DOMElements.textFooterInput.value);
         if (footerText.trim()) {
             const footerMetrics = calculateTextLayoutMetrics(
                 footerText,
@@ -645,6 +709,20 @@
         drawCornerRibbon();
         DOMElements.backgroundOpacityOutput.textContent = `${DOMElements.backgroundOpacityInput.value}%`;
     };
+
+    const autoResizeTextarea = (el) => {
+        if (!el || el.tagName !== 'TEXTAREA') return;
+        el.addEventListener('input', () => {
+            el.style.height = 'auto';
+            el.style.height = `${el.scrollHeight}px`;
+        });
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    };
+
+    DOMElements.textTitleInput && autoResizeTextarea(DOMElements.textTitleInput);
+    DOMElements.textContentInput && autoResizeTextarea(DOMElements.textContentInput);
+    DOMElements.textSubtitleInput && autoResizeTextarea(DOMElements.textSubtitleInput);
 
     // Event Listeners
     realtimeInputElements.forEach((element) => {
@@ -700,8 +778,13 @@
         loadedImage.src = imageObjectUrl;
     });
 
-    DOMElements.backgroundUrlInput.addEventListener('change', async () => {
+    DOMElements.backgroundUrlInput.addEventListener('input', () => {
         const url = DOMElements.backgroundUrlInput.value.trim();
+        if (!url) return;
+        loadBackgroundFromUrl(url);
+    });
+
+    const loadBackgroundFromUrl = async (url) => {
         if (!url) return;
         try {
             const response = await fetch(url);
@@ -723,7 +806,7 @@
         } catch {
             console.error('Failed to load background image from URL:', url);
         }
-    });
+    };
 
     DOMElements.removeBackgroundButton.addEventListener('click', () => {
         clearBackgroundImageState();
